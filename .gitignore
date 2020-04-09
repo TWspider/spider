@@ -102,3 +102,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+./Chihiro/Chihiro/Chihiro.txt
+./Chihiro/Chihiro/anjuke.txt
