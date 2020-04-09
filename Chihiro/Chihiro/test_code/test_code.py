@@ -57,6 +57,9 @@ def t2():
     for h in house_list_tw:
 
         print(h)
+        print(h)
+        print(h)
+        print(h)
 
 
 t2()
