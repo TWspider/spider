@@ -414,8 +414,8 @@ class News:
         monitorword = self.verdict_content(content)
         monitorword = list(set(monitorword))
         # flag_verdict = self.news_analysis(content)
-        if monitorword:
-            with self.connect.cursor() as cur:
+        with self.connect.cursor() as cur:
+            if monitorword:
                 monitorword = ','.join(monitorword)
                 item.update({
                     "monitorword": monitorword
@@ -423,8 +423,8 @@ class News:
                 inserttime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 flag_repeat = (item.get("title"), item.get("source"))
                 if flag_repeat not in self.title_source:
-                    # cur.execute("Insert into Content(newurl, title, content) values(%s,%s,%s)",
-                    #             (item.get("newurl"), item.get("title"), content))
+                    cur.execute("Insert into Content(newurl, title, content,flag) values(%s,%s,%s,%s)",
+                                (item.get("newurl"), item.get("title"), content, 1))
                     '''
                     Source,SearchWord,Located,NewUrl,Title,NewLabel,MonitorWord,PublishTime,TitleId,InsertTime
                     '''
@@ -442,8 +442,8 @@ class News:
                         item.get('titleid'),
                         inserttime
                     ))
-                    self.connect.commit()
                     self.wordcloud_dict_handle(source=source, searchword=searchword, monitorword=monitorword)
+                    self.connect.commit()
 
 
 if __name__ == '__main__':
