@@ -48,6 +48,10 @@ class News:
     def __init__(self):
         '''
         招聘、买房、卖房、形象
+        搜索词：0
+        相关词：1
+        负面词：2
+        白名单：3
         '''
 
         self.proxies = ip_change()
@@ -68,50 +72,32 @@ class News:
                 "select title,source from News where DATEDIFF(d,[inserttime],GETDATE())=0".format(self.inserttime))
             self.title_source = cur.fetchall()
         self.sql_insert = '''Insert into News(Source,SearchWord,Located,NewUrl,Title,NewLabel,MonitorWord,PublishTime,TitleId,InsertTime) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'''
-        # 搜索词
-        self.searchword_list = [
-            '太平洋房屋',
-            '太平洋房产',
-            '太平洋中介',
-            '太屋网',
-            '太屋集团',
-            '菁英地产',
-            'tpy房屋',
-            'tpy中介',
-            'tpy房产',
-            '太平洋房屋中介',
-        ]
-        # 1、白名单
-        self.white_list = [
-            "太平洋保险", '太平洋金融', '太平洋理财', '太平洋人寿', '太平洋汽车', '太平洋霸主',
-            '爱茉莉太平洋',
-            '太平洋包装', '太平洋证券', '抛开一切傲慢与偏见', '真情服务', '不吃差价',
-            '飞翔中介',
-            '从而导致一生积蓄被骗',
-        ]
-        # 2、黑名单
-        self.black_list = [
 
-        ]
-        self.related_list = [
-            "太平洋",
-            "tpy",
-            "TPY",
-            "太屋",
-            "菁英地产",
-        ]
-        # 2、负面词
+        self.sql_content_list = "select content from News_Params where type={}"
+        # 搜索词0
+        self.searchword_list = pd.read_sql(
+            self.sql_content_list.format(0),
+            self.engine_word).loc[:, "content"].tolist()
+        # 相关词1
+        self.related_list = pd.read_sql(
+            self.sql_content_list.format(1),
+            self.engine_word).loc[:, "content"].tolist()
+        # 负面词2
         '''
         加班
         '''
-        self.monitorword_list = [
-            "体罚", "罚款", "拖欠工资", "加班多", "不靠谱",
-            "骚扰", "吃差价", "恶作剧", "太某屋", "太某洋房屋",
-            "黑中介", "无良中介", '坑',
-            "假谈", "套路", "假客户", "二卡", "报复",
-            "骗子", '恶劣', "忽悠", '翻脸', '欺骗', '辱骂',
-            '处罚', '被骗', '骗我们', '号码轰炸'
+        self.monitorword_list = pd.read_sql(
+            self.sql_content_list.format(2),
+            self.engine_word).loc[:, "content"].tolist()
+        # 白名单3
+        self.white_list = pd.read_sql(
+            self.sql_content_list.format(3),
+            self.engine_word).loc[:, "content"].tolist()
+        # 黑名单4
+        self.black_list = [
+
         ]
+
         self.set_list = set()
         self.ANTONYM = ['不']
         self.KEY_WORDS_RE = '|'.join(self.monitorword_list)
@@ -481,15 +467,17 @@ if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler
 
     scheduler = BlockingScheduler()
+
+
     # 请求间隔长的写在前
     def start():
         news.req_sogou()
         news.req_baidu()
         news.wordcloud_pd_handle()
 
+
     scheduler.add_job(start, 'interval', days=1, start_date='2020-04-08 00:00:00', misfire_grace_time=10)
     scheduler.start()
-
 
 '''
 

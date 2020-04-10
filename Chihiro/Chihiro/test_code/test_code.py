@@ -30,11 +30,13 @@ def t1():
     time.sleep(3)
     driver.close()
 
+
 '''
 g85WbNOTtWi1cyaAkFk-4IszmrLHFBAaXknh*XhBnzUPR2cLf-sdYFXvRSKywHZU3sIzb-cLBIYZNWqAu0NURLvBNO2*3ExxDmUmy5a1eKRfHANkzw9HPemyOayzKK-Y
 
 g85WbNOTtWi1cyaAkFk-4IszmrLHFBAaXknh*XhBnzUPR2cLf-sdYFXvRSKywHZU3sIzb-cLBIYZNWqAu0NURLvBNO2*3ExxDmUmy5a1eKRfHANkzw9HPemyOayzKK-Y
 '''
+
 
 def t2():
     import pyodbc
@@ -49,12 +51,17 @@ def t2():
         'mssql+pyodbc://{0}:{1}@{2}/{3}?driver=SQL Server Native Client 11.0'.format(user, password, host,
                                                                                      database),
         fast_executemany=True)
-    house_list_tw = pd.read_sql(
-        '''
-        select * from ThirdHouseResource
-        ''',
-        engine_res, chunksize=100)
-    for h in house_list_tw:
+    sl = "select content from News_Params where type={}"
+    searchword_list = pd.read_sql(
+        sl.format(1),
+        engine_res)
+    print(searchword_list.loc[:, "content"].tolist())
+    print(type(searchword_list.loc[:, "content"].tolist()))
 
-        print(h)
+
 t2()
+
+'''
+
+yum install -y chkconfig python bind-utils psmisc libxslt zlib sqlite cyrus-sasl-plain cyrus-sasl-qssapi fuse fuse-libs redhat-lsb
+'''
