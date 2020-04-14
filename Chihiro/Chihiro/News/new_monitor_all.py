@@ -145,7 +145,7 @@ class News:
     def today_source_title(self):
         with self.connect.cursor() as cur:
             cur.execute(
-                "select title,source from News where DATEDIFF(d,[inserttime],GETDATE())=0".format(self.inserttime))
+                "select title from content")
             today_source_title = cur.fetchall()
             return today_source_title
 
@@ -319,13 +319,9 @@ class News:
                             # sql_baidu
                             item.update({"source": "百度网页"})
                             title = item.get("title")
-                            flag_set = (searchword, title)
-                            if flag_set not in self.set_list:
-                                searchword_title = searchword + title
-                                titleid = hashlib.md5(searchword_title.encode(encoding='UTF-8')).hexdigest()
-                                item.update({"titleid": titleid})
+                            if title not in self.set_list:
                                 self.sql(item)
-                                self.set_list.add(flag_set)
+                                self.set_list.add(title)
                         except Exception as e:
                             if isinstance(e, RetryError):
                                 print("重试失败:{}".format(url))
@@ -359,13 +355,9 @@ class News:
                             item.update({"source": "搜狗微信"})
                             # sql_sogou
                             title = item.get("title")
-                            flag_set = (searchword, title)
-                            if flag_set not in self.set_list:
-                                searchword_title = searchword + title
-                                titleid = hashlib.md5(searchword_title.encode(encoding='UTF-8')).hexdigest()
-                                item.update({"titleid": titleid})
+                            if title not in self.set_list:
                                 self.sql(item)
-                                self.set_list.add(flag_set)
+                                self.set_list.add(title)
                         except Exception as e:
                             if isinstance(e, RetryError):
                                 print("重试失败:{}".format(url))
@@ -417,37 +409,20 @@ class News:
         content = item.get("content")
         monitorword = self.verdict_content(content)
         monitorword = list(set(monitorword))
-        # flag_verdict = self.news_analysis(content)
         with self.connect.cursor() as cur:
-            if monitorword:
-                monitorword = ','.join(monitorword)
-                item.update({
-                    "monitorword": monitorword
-                })
-                inserttime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                flag_repeat = (item.get("title"), item.get("source"))
-                if flag_repeat not in self.title_source:
-                    cur.execute("Insert into Content(newurl, title, content,flag) values(%s,%s,%s,%s)",
-                                (item.get("newurl"), item.get("title"), content, 1))
-                    '''
-                    Source,SearchWord,Located,NewUrl,Title,NewLabel,MonitorWord,PublishTime,TitleId,InsertTime
-                    '''
-                    source = item.get("source")
-                    searchword = item.get("searchword")
-                    cur.execute(self.sql_insert, (
-                        source,
-                        searchword,
-                        item.get("located"),
-                        item.get("newurl"),
-                        item.get("title"),
-                        item.get("newlabel"),
-                        item.get("monitorword"),
-                        item.get('publishtime'),
-                        item.get('titleid'),
-                        inserttime
-                    ))
-                    self.wordcloud_dict_handle(source=source, searchword=searchword, monitorword=monitorword)
-                    self.connect.commit()
+            title = item.get("title")
+            flag_title = (title,)
+            if flag_title not in self.title_source:
+                if monitorword:
+                    flag = 1
+                else:
+                    flag = 0
+                cur.execute("Insert into Content(newurl, title, content,flag) values(%s,%s,%s,%s)",
+                            (item.get("newurl"), item.get("title"), content, flag))
+                '''
+                Source,SearchWord,Located,NewUrl,Title,NewLabel,MonitorWord,PublishTime,TitleId,InsertTime
+                '''
+                self.connect.commit()
 
 
 if __name__ == '__main__':
@@ -482,15 +457,7 @@ if __name__ == '__main__':
         news.wordcloud_pd_handle()
 
 
-    scheduler.add_job(start, 'interval', days=1, start_date='2020-04-13 10:38:50', misfire_grace_time=10)
-    scheduler.start()
+    start()
 
-'''
-
-docker run -id --hostname=quickstart.cloudera --net=bridge --privileged=true -p 8020:8020 -p 7180:7180 -p 21050:21050 -p 8890:8890 -p 10002:10002 -p 25010:25010 -p 25020:25020 -p 18088:18088 -p 8088:8088 -p 19888:19888 -p 7187:7187 -p 11000:11000 -t -p 8888:8888 --name=mycdh3 cloudera/quickstart /usr/bin/docker-quickstart
- ${
- if(len(TitleId) == 0,
- " ",
- "and TitleId in (SELECT VALUE FROM STRING_SPLIT('"+ TitleId +"',','))")
- }
-'''
+# 过滤重复标题网页
+# 每次启动过滤已爬取的网页不到数据库中
