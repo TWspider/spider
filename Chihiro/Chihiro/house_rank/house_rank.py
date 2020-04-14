@@ -590,7 +590,7 @@ class RankHanle(object):
             '''
             select e.EstateId as id_estate,e.EstateAddress as PropertyAddress,e.EstateAreaName as PropertyCommunity,r.TotalLayer as TotalFloor,r.LayerHighLowTypeName as Floor,r.RoomNum as room,r.HallNum as hall,r.ToiletNum as toilet,r.PropertySquare as BuildingSquare,r.RoomId as id_tw from Estate as e inner join room as r on e.EstateId=r.EstateId GROUP BY e.EstateId,e.EstateAddress,e.EstateAreaName,r.TotalLayer,r.LayerHighLowTypeName,r.RoomNum,r.HallNum,r.ToiletNum,r.PropertySquare,r.RoomId
             ''',
-            self.engine_tw_house, chunksize=100000)
+            self.engine_tw_house, chunksize=50000)
         self.address = ["road", 'alley']
         self.community_road = ["PropertyCommunity", 'road']
         self.community = ["PropertyCommunity"]

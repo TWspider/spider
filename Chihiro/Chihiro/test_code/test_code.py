@@ -59,9 +59,28 @@ def t2():
     print(type(searchword_list.loc[:, "content"].tolist()))
 
 
-t2()
+import random
+
+
+class T():
+    def __init__(self):
+        self.test = self.t()
+
+    def a(self):
+        print(self.test)
+
+    @classmethod
+    def t(cls):
+        b = random.randint(1, 23)
+        return b
+
+
+t3 = T()
+print(t3.a())
+t3.test = t3.t()
+
+print(t3.a())
 
 '''
-
 yum install -y chkconfig python bind-utils psmisc libxslt zlib sqlite cyrus-sasl-plain cyrus-sasl-qssapi fuse fuse-libs redhat-lsb
 '''

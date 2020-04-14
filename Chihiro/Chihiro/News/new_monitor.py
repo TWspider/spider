@@ -67,10 +67,8 @@ class News:
         self.connect = pymssql.connect(host=self.host, database=self.database,
                                        user=self.user, password=self.password, charset="utf8")  # 建立连接
         self.inserttime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with self.connect.cursor() as cur:
-            cur.execute(
-                "select title,source from News where DATEDIFF(d,[inserttime],GETDATE())=0".format(self.inserttime))
-            self.title_source = cur.fetchall()
+        self.title_source = self.today_source_title()
+
         self.sql_insert = '''Insert into News(Source,SearchWord,Located,NewUrl,Title,NewLabel,MonitorWord,PublishTime,TitleId,InsertTime) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'''
 
         self.sql_content_list = "select content from News_Params where type={}"
@@ -143,6 +141,13 @@ class News:
         # print(kwargs)
         response = self.req.get(**kwargs, timeout=5, proxies=self.proxies)
         return response
+
+    def today_source_title(self):
+        with self.connect.cursor() as cur:
+            cur.execute(
+                "select title,source from News where DATEDIFF(d,[inserttime],GETDATE())=0".format(self.inserttime))
+            today_source_title = cur.fetchall()
+            return today_source_title
 
     def verdict_content(self, content):
         len_white_list = len(self.white_list) - 1
@@ -471,12 +476,14 @@ if __name__ == '__main__':
 
     # 请求间隔长的写在前
     def start():
+        news.set_list = set()
+        news.title_source = news.today_source_title()
         news.req_sogou()
         news.req_baidu()
         news.wordcloud_pd_handle()
 
 
-    scheduler.add_job(start, 'interval', days=1, start_date='2020-04-08 00:00:00', misfire_grace_time=10)
+    scheduler.add_job(start, 'interval', days=1, start_date='2020-04-13 10:38:50', misfire_grace_time=10)
     scheduler.start()
 
 '''
