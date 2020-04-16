@@ -577,7 +577,7 @@ class ClearDate(object):
 
 
 class RankHanle(object):
-    def __init__(self, host, user, password, database):
+    def __init__(self, host, user, password, database, chunksize):
         self.engine_third_house = create_engine('mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
         self.engine_tw_house = create_engine('mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, 'TWEstate'))
         self.engine_res = create_engine(
@@ -590,7 +590,7 @@ class RankHanle(object):
             '''
             select e.EstateId as id_estate,e.EstateAddress as PropertyAddress,e.EstateAreaName as PropertyCommunity,r.TotalLayer as TotalFloor,r.LayerHighLowTypeName as Floor,r.RoomNum as room,r.HallNum as hall,r.ToiletNum as toilet,r.PropertySquare as BuildingSquare,r.RoomId as id_tw from Estate as e inner join room as r on e.EstateId=r.EstateId GROUP BY e.EstateId,e.EstateAddress,e.EstateAreaName,r.TotalLayer,r.LayerHighLowTypeName,r.RoomNum,r.HallNum,r.ToiletNum,r.PropertySquare,r.RoomId
             ''',
-            self.engine_tw_house, chunksize=50000)
+            self.engine_tw_house, chunksize=chunksize)
         self.address = ["road", 'alley']
         self.community_road = ["PropertyCommunity", 'road']
         self.community = ["PropertyCommunity"]
@@ -897,24 +897,31 @@ class MatchRank:
     '''
 
     def __init__(self, host, user, password, database, flag_anjuke=False):
+        self.flag_anjuke = flag_anjuke
         self.cd = ClearDate()
-        self.rh = RankHanle(host=host, user=user, password=password, database=database)
         self.engine_third_house = create_engine('mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
-        if flag_anjuke:
+        if self.flag_anjuke:
             self.house_rank = 'house_rank_anjuke'
             self.house_rank_new = 'house_rank_new_anjuke'
+            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=5000)
             # self.sql_str_day = "select DISTINCT RoomId as id_third,PropertyAddress,PropertyCommunity,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit from ThirdHouseResource"
             self.sql_str_day = "select DISTINCT RoomId as id_third,PropertyAddress,PropertyCommunity,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit,Resource as resource from ThirdHouseResource WHERE (HouseStatus='可售' or HouseStatus='可租') and Resource ='安居客'"
         else:
             self.house_rank = 'house_rank'
             self.house_rank_new = 'house_rank_new'
+            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=50000)
             # self.sql_str_day = "select DISTINCT RoomId as id_third,PropertyAddress,PropertyCommunity,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit from ThirdHouseResource WHERE RoomId not in (select id_third from house_rank GROUP BY id_third)"
             self.sql_str_day = "select DISTINCT RoomId as id_third,PropertyAddress,PropertyCommunity,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit,Resource as resource from ThirdHouseResource WHERE (HouseStatus='可售' or HouseStatus='可租') and Resource !='安居客'"
 
     def match_rank(self):
-        house_third_list = pd.read_sql(
-            self.sql_str_day,
-            self.engine_third_house, chunksize=100000)
+        if self.flag_anjuke:
+            house_third_list = pd.read_sql(
+                self.sql_str_day,
+                self.engine_third_house, chunksize=5000)
+        else:
+            house_third_list = pd.read_sql(
+                self.sql_str_day,
+                self.engine_third_house, chunksize=50000)
         res_match_is_sql = pd.DataFrame(
             columns=["id_third", "id_tw", 'id_estate', 'resource', "star_level", "input_time"])
         res_match_is_sql.to_sql(self.house_rank_new, con=self.rh.engine_res, if_exists="replace", index=False,
@@ -1035,7 +1042,6 @@ if __name__ == '__main__':
                         print("无此数据表")
             time_end = time.time()
             print('totally cost', (time_end - time_start))
-
 
     scheduler.add_job(start, 'interval', days=1, start_date='2020-03-23 00:00:00', misfire_grace_time=10)
     scheduler.start()

@@ -304,7 +304,7 @@ class News:
         self.delay_random_interval = [0, 1]
         for searchword in self.searchword_list:
             start_page = 1
-            for page in range(start_page, 11):
+            for page in range(start_page, 20):
                 try:
                     url_list = self.item_baidu(searchword=searchword, page=page)
                     for located, url in enumerate(url_list):
@@ -369,35 +369,6 @@ class News:
                     else:
                         print(e, e.__traceback__.tb_lineno)
 
-    def wordcloud_pd_handle(self):
-        ls = [{"source": i[0], "searchword": j[0], "monitorword": pd.value_counts(j[1].split(",")).index,
-               "wordcount": pd.value_counts(j[1].split(",")).values}
-              for i in self.worddict.items() for j in
-              i[1].items()]
-        res = pd.DataFrame()
-        for k in ls:
-            dict_word1 = pd.DataFrame(k)
-            res = res.append(dict_word1, ignore_index=True)
-        dtype = {
-            "source": NVARCHAR(255),
-            "searchword": NVARCHAR(255),
-            "monitorword": NVARCHAR(255),
-            "wordcount": INT,
-        }
-        res.to_sql("wordcloud", con=self.engine_word, if_exists="replace", index=False, dtype=dtype)
-
-    def wordcloud_dict_handle(self, source, searchword, monitorword):
-        if source in self.worddict.keys():
-            searchword_dict = self.worddict.get(source)
-            if searchword in searchword_dict.keys():
-                # 加入监测词
-                monitorword_str = searchword_dict.get(searchword)
-                monitorword_str += "," + monitorword
-                searchword_dict.update({searchword: monitorword_str})
-            else:
-                searchword_dict.update({searchword: monitorword})
-        else:
-            self.worddict.update({source: {searchword: monitorword}})
 
     def sql(self, item):
         '''
@@ -444,9 +415,7 @@ if __name__ == '__main__':
     '''
 
     from apscheduler.schedulers.blocking import BlockingScheduler
-
     scheduler = BlockingScheduler()
-
 
     # 请求间隔长的写在前
     def start():
@@ -454,10 +423,7 @@ if __name__ == '__main__':
         news.title_source = news.today_source_title()
         news.req_sogou()
         news.req_baidu()
-        news.wordcloud_pd_handle()
 
-
-    start()
-
-# 过滤重复标题网页
-# 每次启动过滤已爬取的网页不到数据库中
+    # start()
+    scheduler.add_job(start, 'interval', days=1, start_date='2020-04-15 00:00:00', misfire_grace_time=10)
+    scheduler.start()

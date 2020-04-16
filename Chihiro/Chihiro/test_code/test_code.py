@@ -75,12 +75,44 @@ class T():
         return b
 
 
-t3 = T()
-print(t3.a())
-t3.test = t3.t()
+def t_req_content():
+    import requests
+    from lxml import etree
+    headers_baidu = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+        "Cache-Control": "max-age=0",
+        "Connection": "keep-alive",
+        # "Host": "www.baidu.com",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36",
+    }
+    url = "http://www.baidu.com/link?url=Zhy6tjzBb2gc71LlGaX6ULs6DfySEhWBEofPm_ux4lil0uQr_Pn_NpJQ98GXg9EwN9PgfYdAAkoAHkZiuagAh_"
+    # url = "http://www.fangchan.com/news/132/2019-07-09/6554250444678696994.html"
 
-print(t3.a())
+    res = requests.get(url=url, headers=headers_baidu)
+    res_text = res.content.decode("utf8", 'ignore')
+    print(res_text)
+    res_xml = etree.HTML(res_text)
+    res = res_xml.xpath("//div")
+    for i in res:
+        res1 = i.xpath("string(.)").replace(" ", '').replace("\n", '')
+        if res1 != '' or res1 != None:
+            pass
+            # print(res1)
 
+
+def t_req_content_1():
+    # -*- coding: utf-8 -*-
+    pass
+
+
+t_req_content()
 '''
 yum install -y chkconfig python bind-utils psmisc libxslt zlib sqlite cyrus-sasl-plain cyrus-sasl-qssapi fuse fuse-libs redhat-lsb
 '''
