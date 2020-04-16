@@ -53,7 +53,7 @@ class News:
         负面词：2
         白名单：3
         '''
-
+        self.UNRELATED_KEYWORD = '以上推荐为优质及原创文章|篱笆社区|分享新浪微博|引用只看此人|下一页第页确定|注册日期|第\d+楼|被.+编辑过|当前微信版本不支持该功能，请升级至最新版本。'
         self.proxies = ip_change()
         self.delay_random_interval = [2, 3]
         self.req = requests.session()
@@ -141,6 +141,29 @@ class News:
         # print(kwargs)
         response = self.req.get(**kwargs, timeout=5, proxies=self.proxies)
         return response
+
+    def req_content(self, res_text):
+        res_xml = Selector(text=res_text)
+        res = res_xml.xpath("//div").xpath("string(.)").extract()
+        res_line = []
+        for i in res:
+            res_clean = re.sub(r"\s+", '\n', i)
+
+            res_clean = re.sub(r"[^0-9a-zA-Z\u4e00-\u9fa5\.%，。！？：,.!?:]+", '', res_clean)
+            res_split = []
+            for item in res_clean.split('\n'):
+                if len(item) < 10:
+                    continue
+
+                if re.search(self.UNRELATED_KEYWORD, item):
+                    continue
+
+                if re.search('[\u4e00-\u9fa5]', item):
+                    res_split.append(item)
+            res_line.extend(res_split)
+        res_line = set(res_line)
+        content = '<SEP>'.join(res_line)
+        return content
 
     def today_source_title(self):
         with self.connect.cursor() as cur:
@@ -250,8 +273,7 @@ class News:
         # title
         title = res2_handle.xpath('//meta[@property="og:title"]/@content').extract_first()
         try:
-            content = res2_handle.xpath("//div[@id='js_content']").xpath("string(.)").extract_first()
-            content = content.strip()
+            content = self.req_content(res2_text)
         except Exception as e:
             content = None
         item.update(
@@ -286,9 +308,7 @@ class News:
         res_extract = res.content.decode("utf-8", 'ignore')
         res_handle = Selector(text=res_extract)
         title = res_handle.xpath("//title/text()").extract_first()
-        # extractor = GeneralNewsExtractor()
-        # result = extractor.extract(res_extract)
-        content = res_extract
+        content = self.req_content(res_extract)
         item.update(
             {
                 "title": title,
@@ -482,7 +502,7 @@ if __name__ == '__main__':
         news.wordcloud_pd_handle()
 
 
-    scheduler.add_job(start, 'interval', days=1, start_date='2020-04-13 10:38:50', misfire_grace_time=10)
+    scheduler.add_job(start, 'interval', days=1, start_date='2020-04-13 00:00:00', misfire_grace_time=10)
     scheduler.start()
 
 '''
