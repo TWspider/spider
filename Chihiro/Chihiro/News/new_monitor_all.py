@@ -11,8 +11,8 @@ from scrapy.selector import Selector
 import pandas as pd
 from sqlalchemy.types import NVARCHAR, INT
 from sqlalchemy import create_engine
-from gne import GeneralNewsExtractor
 from retrying import retry, RetryError
+from handle_content import req_content
 
 
 def ip_change():
@@ -250,8 +250,7 @@ class News:
         # title
         title = res2_handle.xpath('//meta[@property="og:title"]/@content').extract_first()
         try:
-            content = res2_handle.xpath("//div[@id='js_content']").xpath("string(.)").extract_first()
-            content = content.strip()
+            content = req_content(res2_text)
         except Exception as e:
             content = None
         item.update(
@@ -286,9 +285,7 @@ class News:
         res_extract = res.content.decode("utf-8", 'ignore')
         res_handle = Selector(text=res_extract)
         title = res_handle.xpath("//title/text()").extract_first()
-        # extractor = GeneralNewsExtractor()
-        # result = extractor.extract(res_extract)
-        content = res_extract
+        content = req_content(res_extract)
         item.update(
             {
                 "title": title,
@@ -424,6 +421,6 @@ if __name__ == '__main__':
         news.req_sogou()
         news.req_baidu()
 
-    # start()
-    scheduler.add_job(start, 'interval', days=1, start_date='2020-04-15 00:00:00', misfire_grace_time=10)
-    scheduler.start()
+    start()
+    # scheduler.add_job(start, 'interval', days=1, start_date='2020-04-15 00:00:00', misfire_grace_time=10)
+    # scheduler.start()

@@ -75,9 +75,13 @@ class T():
         return b
 
 
+unrelated_keyword = '篱笆社区|分享新浪微博|引用只看此人|下一页第页确定|注册日期|第\d+楼|被.+编辑过'
+
+
 def t_req_content():
     import requests
-    from lxml import etree
+    import re
+    from scrapy.selector import Selector
     headers_baidu = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
         "Accept-Encoding": "gzip, deflate, br",
@@ -97,22 +101,35 @@ def t_req_content():
 
     res = requests.get(url=url, headers=headers_baidu)
     res_text = res.content.decode("utf8", 'ignore')
-    print(res_text)
-    res_xml = etree.HTML(res_text)
-    res = res_xml.xpath("//div")
+    res_xml = Selector(text=res_text)
+
+    res = res_xml.xpath("//div").xpath("string(.)").extract()
+    res_line = []
     for i in res:
-        res1 = i.xpath("string(.)").replace(" ", '').replace("\n", '')
-        if res1 != '' or res1 != None:
-            pass
-            # print(res1)
+        res_clean = re.sub(r"\s+", '\n', i)
+        res_clean = re.sub(r"[^0-9a-zA-Z\u4e00-\u9fa5\.%]+", '', res_clean)
+        res_split = []
+        for item in res_clean.split('\n'):
+            if len(item) < 10:
+                continue
+
+            if re.search(unrelated_keyword, item):
+                continue
+
+            if re.search('[\u4e00-\u9fa5]', item):
+                res_split.append(item)
+
+        res_line.extend(res_split)
+
+    res_line = set(res_line)
+    print(res_line)
 
 
-def t_req_content_1():
-    # -*- coding: utf-8 -*-
-    pass
+if __name__ == "__main__":
+    t_req_content()
 
 
-t_req_content()
+
 '''
 yum install -y chkconfig python bind-utils psmisc libxslt zlib sqlite cyrus-sasl-plain cyrus-sasl-qssapi fuse fuse-libs redhat-lsb
 '''
