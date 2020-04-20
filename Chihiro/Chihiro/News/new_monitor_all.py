@@ -421,6 +421,6 @@ if __name__ == '__main__':
         news.req_sogou()
         news.req_baidu()
 
-    start()
-    # scheduler.add_job(start, 'interval', days=1, start_date='2020-04-15 00:00:00', misfire_grace_time=10)
-    # scheduler.start()
+    # start()
+    scheduler.add_job(start, 'interval', days=1, start_date='2020-04-15 05:00:00', misfire_grace_time=10)
+    scheduler.start()
