@@ -11,7 +11,6 @@ from scrapy.selector import Selector
 import pandas as pd
 from sqlalchemy.types import NVARCHAR, INT
 from sqlalchemy import create_engine
-from gne import GeneralNewsExtractor
 from retrying import retry, RetryError
 
 
@@ -76,8 +75,8 @@ class News:
         self.searchword_list = pd.read_sql(
             self.sql_content_list.format(0),
             self.engine_word).loc[:, "content"].tolist()
-        # 相关词1
-        self.related_list = pd.read_sql(
+        # 负面规则1
+        self.negative_list = pd.read_sql(
             self.sql_content_list.format(1),
             self.engine_word).loc[:, "content"].tolist()
         # 负面词2
@@ -146,22 +145,16 @@ class News:
         res_xml = Selector(text=res_text)
         res = res_xml.xpath("//div").xpath("string(.)").extract()
         res_line = []
-        for i in res:
-            res_clean = re.sub(r"\s+", '\n', i)
-
-            res_clean = re.sub(r"[^0-9a-zA-Z\u4e00-\u9fa5\.%，。！？：,.!?:]+", '', res_clean)
-            res_split = []
-            for item in res_clean.split('\n'):
-                if len(item) < 10:
-                    continue
-
-                if re.search(self.UNRELATED_KEYWORD, item):
-                    continue
-
-                if re.search('[\u4e00-\u9fa5]', item):
-                    res_split.append(item)
-            res_line.extend(res_split)
-        res_line = set(res_line)
+        # 新闻提取内容
+        new_set_list = list(set([re.sub(r"[^0-9a-zA-Z\u4e00-\u9fa5\.%，。！？：,.!?:]+|\s+", '', i) for i in res]))
+        for item in new_set_list:
+            # 去除无关词
+            if len(item) < 10:
+                continue
+            if re.search(self.UNRELATED_KEYWORD, item):
+                continue
+            # 判断是否相关+白名单+负面词
+            res_line.append(item)
         content = '<SEP>'.join(res_line)
         return content
 
@@ -172,39 +165,40 @@ class News:
             today_source_title = cur.fetchall()
             return today_source_title
 
+    # 实际业务函数
     def verdict_content(self, content):
-        len_white_list = len(self.white_list) - 1
+        '''
+        if：进入白名单，则判断为非负面
+        else：是否符合规则
+            if：符合，则判断为负面
+                if：没有负面词
+                    语义负面
+                else：
+                    找出负面词
+            else：
+                非负面
+        :param content:
+        :return:
+        '''
         res = []
-        for i in self.related_list:
-            if i in content:
-                # 相关
-                flag = 0
-                for index, j in enumerate(self.white_list):
-                    if j in content:
-                        flag += 1
-                    elif flag == 0 and len_white_list == index:
-                        for k in self.monitorword_list:
-                            if k in content:
-                                res.append(k)
+        flag_white = False
+        flag = False
+        for index, j in enumerate(self.white_list):
+            if j in content:
+                flag_white = True
+        if not flag_white:
+            ls_content = content.split("<SEP>")
+            for reg in self.negative_list:
+                for c in ls_content:
+                    if re.search(reg, c):
+                        flag = True
+        if flag:
+            for k in self.monitorword_list:
+                if k in content:
+                    res.append(k)
+            if len(res) == 0:
+                res.append("语义负面")
         return res
-
-    def news_analysis(self, content):
-
-        """文本无关：若为True"""
-        if not bool(re.search('太.洋|菁英', content)):
-            return False
-
-        paragraph = re.split(r'\r|\n|<p>', content)
-        paragraph = [item for item in paragraph if re.search('太.洋|菁英', item)]
-
-        lines = re.split(self.STOP, ''.join(paragraph))
-        lines = [item for item in lines if re.search(self.KEY_WORDS_RE, item)]
-
-        antonym = [item for item in lines if re.search(self.ANTONYM_RE, item)]
-
-        if len(antonym) > len(lines) / 2:
-            return False
-        return True
 
     def extract_current_url_sogou(self, searchword, page):
         url_listpage = 'https://weixin.sogou.com/weixin?query={}&type=2&page={}&ie=utf8'.format(
@@ -435,9 +429,9 @@ class News:
         true为负面
         '''
         content = item.get("content")
+        # 实际业务函数
         monitorword = self.verdict_content(content)
         monitorword = list(set(monitorword))
-        # flag_verdict = self.news_analysis(content)
         with self.connect.cursor() as cur:
             if monitorword:
                 monitorword = ','.join(monitorword)
@@ -502,8 +496,9 @@ if __name__ == '__main__':
         news.wordcloud_pd_handle()
 
 
-    scheduler.add_job(start, 'interval', days=1, start_date='2020-04-13 00:00:00', misfire_grace_time=10)
-    scheduler.start()
+    start()
+    # scheduler.add_job(start, 'interval', days=1, start_date='2020-04-13 00:00:00', misfire_grace_time=10)
+    # scheduler.start()
 
 '''
 docker run -id --hostname=quickstart.cloudera --net=bridge --privileged=true -p 8020:8020 -p 7180:7180 -p 21050:21050 -p 8890:8890 -p 10002:10002 -p 25010:25010 -p 25020:25020 -p 18088:18088 -p 8088:8088 -p 19888:19888 -p 7187:7187 -p 11000:11000 -t -p 8888:8888 --name=mycdh3 cloudera/quickstart /usr/bin/docker-quickstart
