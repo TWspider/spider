@@ -32,7 +32,7 @@ class Chihiro(scrapy.Spider):
             'accept-language': 'gzip',
             'content-type': 'charset=utf8',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'Cookie': "gr_user_id=8cfc279d-37f1-4214-a9c4-3bc18729c385; grwng_uid=96cd6356-a60d-4b6b-ab22-361f1d1d839a; Y190cmFja2lk=73a9977002ec49b68dcc0fdde38ccc17; acw_tc=65597d1615705879540916094ee97fc1cd6e308264fee86e78dba6a105; Hm_lvt_219872fb6de637cac5884769682da5ad=1570587955,1571127896,1572328984; gioClientCookie=d29e91b3-d697-4177-a822-38ffe0ab608d; _pk_ref.10.5e68=%5B%22%22%2C%22%22%2C1572418167%2C%22http%3A%2F%2Fdefault.centanet.com%2F%22%5D; _pk_ses.10.5e68=*;_pk_id.10.5e68=91dbe8d1a8824461.1570587955.18.1572419485.1572328990.; dft034f=Wu%2FMiTlp99s0GdWA9dWmKg__; Hm_lpvt_219872fb6de637cac5884769682da5ad=1572419485",
+            # 'Cookie': "pastData_esfdtlyd=done; pastData_esfyd=done; sidebar_gjShowLog=done; gr_user_id=8cfc279d-37f1-4214-a9c4-3bc18729c385; grwng_uid=96cd6356-a60d-4b6b-ab22-361f1d1d839a; Y190cmFja2lk=73a9977002ec49b68dcc0fdde38ccc17; pastData_mapyd=done; TY_SESSION_ID=ad51c760-2edb-45b2-8b16-5c44cbaa59ac; gr_user_id=8cfc279d-37f1-4214-a9c4-3bc18729c385; Hm_lvt_901692ccc2baf7c6a2e38e6dce711c9a=1588905693; Hm_lvt_cca621fa3a3d819c5f22f0cf33e5e2d8=1588905693; gioClientCookie=c359f431-f419-4561-a73b-9bcff7829d2f; sidebar_gjShowLog=done; 89d1ccf572d9fa18_gr_session_id=b59c81f5-e404-4996-933f-24d1939ea79b; 89d1ccf572d9fa18_gr_session_id_b59c81f5-e404-4996-933f-24d1939ea79b=true; Hm_lpvt_901692ccc2baf7c6a2e38e6dce711c9a=1589271203; Hm_lpvt_cca621fa3a3d819c5f22f0cf33e5e2d8=1589271203",
         },
         "DOWNLOAD_DELAY": 0.3,
         "CONCURRENT_REQUESTS": 1,

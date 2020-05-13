@@ -100,12 +100,12 @@ pass
 
 # SQL
 ITEM_PIPELINES = {
-   'Chihiro.middleware_sql.ChihiroPipeline': 300,
+   # 'Chihiro.middleware_sql.ChihiroPipeline': 300,
 }
 
 # LOG
-LOG_LEVEL = 'INFO'
-LOG_FILE = "Chihiro.txt"
+# LOG_LEVEL = 'INFO'
+# LOG_FILE = "Chihiro.txt"
 
 # ERROR
 pass

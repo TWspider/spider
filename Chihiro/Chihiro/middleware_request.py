@@ -60,7 +60,10 @@ class UserAgent_Middleware():
         ua = UserAgent()
         request.headers['User-Agent'] = ua.random
 
+
 import base64
+
+
 class IpAgent_Middleware():
     def process_request(self, request, spider):
         # ua = UserAgent()
@@ -68,10 +71,24 @@ class IpAgent_Middleware():
         request.meta['proxy'] = "https://t18449818935473:jg4cg2j9@tps161.kdlapi.com:15818/"
         # request.headers["Proxy-Authorization"] = proxyAuth
 
+
 import requests
 import time
 import random
 from scrapy.http import HtmlResponse
+
+
+class RequestsMiddleware():
+    def process_request(self, request, spider):
+        headers = spider.custom_settings.get("DEFAULT_REQUEST_HEADERS")
+        try:
+            response = requests.get(url=request.url, headers=headers)
+            body = response.content
+            return HtmlResponse(url=request.url, body=body, request=request, encoding='utf-8',
+                                status=200)
+        except:
+            return HtmlResponse(url=request.url, body='', request=request, encoding='utf-8',
+                                status=400)
 
 
 class NewsUserAgentMiddleware():

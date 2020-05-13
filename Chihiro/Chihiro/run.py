@@ -41,8 +41,9 @@ if __name__ == '__main__':
 
     def start_2():
         spider_list_2 = [
-            "anjuke_esf",
-            "anjuke_zf",
+            # "community_lianjia",
+            # "community_zhongyuan",
+            "community_i5j"
         ]
         for spider2 in spider_list_2:
             try:
@@ -53,13 +54,15 @@ if __name__ == '__main__':
                 print(e)
                 print("异常爬虫:{}".format(spider2))
 
-    scheduler.add_job(start_1, 'interval', days=1, start_date='2020-03-24 06:00:00', misfire_grace_time=10)
-    scheduler.add_job(start_2, 'interval', days=5, start_date='2020-03-24 06:00:00', misfire_grace_time=10)
-    scheduler.daemonic = False
-    scheduler.start()
-    try:
-        # start_1()
-        # start_2()
+    def schedueler_start():
+        scheduler.add_job(start_1, 'interval', days=1, start_date='2020-03-24 06:00:00', misfire_grace_time=10)
+        scheduler.add_job(start_2, 'interval', days=5, start_date='2020-03-24 06:00:00', misfire_grace_time=10)
+        scheduler.daemonic = False
+        scheduler.start()
         reactor.run()
+    try:
+
+        # start_1()
+        start_2()
     except (KeyboardInterrupt, SystemExit):
         pass
