@@ -1,13 +1,14 @@
 # coding=gbk
 from selenium import webdriver
 import time
+import re
 from selenium.webdriver.chrome.options import Options
 from scrapy.selector import Selector
 from selenium.webdriver.common.by import By
 import requests
 
 
-def t1():
+def req_chrome():
     chrome_options = Options()
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
@@ -33,106 +34,7 @@ def t1():
     driver.close()
 
 
-'''
-g85WbNOTtWi1cyaAkFk-4IszmrLHFBAaXknh*XhBnzUPR2cLf-sdYFXvRSKywHZU3sIzb-cLBIYZNWqAu0NURLvBNO2*3ExxDmUmy5a1eKRfHANkzw9HPemyOayzKK-Y
-
-g85WbNOTtWi1cyaAkFk-4IszmrLHFBAaXknh*XhBnzUPR2cLf-sdYFXvRSKywHZU3sIzb-cLBIYZNWqAu0NURLvBNO2*3ExxDmUmy5a1eKRfHANkzw9HPemyOayzKK-Y
-'''
-
-
-def t2():
-    import pyodbc
-    import pandas as pd
-    from sqlalchemy import create_engine
-    host = '10.10.202.13'
-    user = 'bigdata_user'
-    password = 'ulyhx3rxqhtw'
-    database = 'TWSpider'
-
-    engine_res = create_engine(
-        'mssql+pyodbc://{0}:{1}@{2}/{3}?driver=SQL Server Native Client 11.0'.format(user, password, host,
-                                                                                     database),
-        fast_executemany=True)
-    sl = "select content from News_Params where type={}"
-    searchword_list = pd.read_sql(
-        sl.format(1),
-        engine_res)
-    print(searchword_list.loc[:, "content"].tolist())
-    print(type(searchword_list.loc[:, "content"].tolist()))
-
-
-import random
-
-
-class T():
-    def __init__(self):
-        self.test = self.t()
-
-    def a(self):
-        print(self.test)
-
-    @classmethod
-    def t(cls):
-        b = random.randint(1, 23)
-        return b
-
-
-unrelated_keyword = '篱笆社区|分享新浪微博|引用只看此人|下一页第页确定|注册日期|第\d+楼|被.+编辑过'
-
-import requests
-import re
-from scrapy.selector import Selector
-
-
-def t_req_content():
-    headers_baidu = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Accept-Language": "zh-CN,zh;q=0.9",
-        "Cache-Control": "max-age=0",
-        "Connection": "keep-alive",
-        # "Host": "www.baidu.com",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
-        "Upgrade-Insecure-Requests": "1",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36",
-    }
-    url = "http://www.baidu.com/link?url=Zhy6tjzBb2gc71LlGaX6ULs6DfySEhWBEofPm_ux4lil0uQr_Pn_NpJQ98GXg9EwN9PgfYdAAkoAHkZiuagAh_"
-    # url = "http://www.fangchan.com/news/132/2019-07-09/6554250444678696994.html"
-
-    res = requests.get(url=url, headers=headers_baidu)
-    res_text = res.content.decode("utf8", 'ignore')
-    res_xml = Selector(text=res_text)
-
-    res = res_xml.xpath("//div").xpath("string(.)").extract()
-    res_line = []
-    for i in res:
-        res_clean = re.sub(r"\s+", '\n', i)
-        res_clean = re.sub(r"[^0-9a-zA-Z\u4e00-\u9fa5\.%]+", '', res_clean)
-        res_split = []
-        for item in res_clean.split('\n'):
-            if len(item) < 10:
-                continue
-
-            if re.search(unrelated_keyword, item):
-                continue
-
-            if re.search('[\u4e00-\u9fa5]', item):
-                res_split.append(item)
-
-        res_line.extend(res_split)
-
-    res_line = set(res_line)
-    print(res_line)
-
-
-def t3():
-    '''
-    导入数据到表内
-    :return:
-    '''
+def sql_pandas():
     import pandas as pd
     from sqlalchemy.types import NVARCHAR, INT
     from sqlalchemy import create_engine
@@ -143,92 +45,7 @@ def t3():
     engine_word = create_engine(
         'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
     ls = [
-        "不.*找.*太平洋",
-        "不要.*太平洋",
-        "别找.*太平洋",
-        "压价.*太平洋",
-        "吐槽.*太平洋",
-        "呵呵.*太平洋",
-        "垃圾.*太平洋",
-        "太平洋.*不.*怎么样",
-        "太平洋.*不要脸",
-        "太平洋.*做的出",
-        "太平洋.*伎俩",
-        "太平洋.*保平安",
-        "太平洋.*值.*[么吗]",
-        "太平洋.*假",
-        "太平洋.*假",
-        "太平洋.*傻逼",
-        "太平洋.*公司.*问题",
-        "太平洋.*名声.*差",
-        "太平洋.*呵呵",
-        "太平洋.*嚣张",
-        "太平洋.*垃圾",
-        "太平洋.*奇葩",
-        "太平洋.*套路",
-        "太平洋.*威胁",
-        "太平洋.*屁",
-        "太平洋.*恶劣",
-        "太平洋.*打压",
-        "太平洋.*打架",
-        "太平洋.*托",
-        "太平洋.*扮演",
-        "太平洋.*投诉",
-        "太平洋.*折磨",
-        "太平洋.*报警",
-        "太平洋.*招数",
-        "太平洋.*整改",
-        "太平洋.*无耻",
-        "太平洋.*智障",
-        "太平洋.*最差",
-        "太平洋.*最没有",
-        "太平洋.*有问题",
-        "太平洋.*服务.*差",
-        "太平洋.*毫无底线",
-        "太平洋.*水分.*大",
-        "太平洋.*没一个",
-        "太平洋.*没完没了",
-        "太平洋.*法院",
-        "太平洋.*洗地",
-        "太平洋.*洗脑",
-        "太平洋.*流氓",
-        "太平洋.*涉事",
-        "太平洋.*烂",
-        "太平洋.*盯.*[上我]",
-        "太平洋.*立案",
-        "太平洋.*素质",
-        "太平洋.*纠纷",
-        "太平洋.*罚",
-        "太平洋.*虚假",
-        "太平洋.*虚报",
-        "太平洋.*要钱",
-        "太平洋.*谨慎",
-        "太平洋.*负面",
-        "太平洋.*责令",
-        "太平洋.*跟踪",
-        "太平洋.*轰炸",
-        "太平洋.*辱骂",
-        "太平洋.*这素质",
-        "太平洋.*退回",
-        "太平洋.*退款",
-        "太平洋.*造假",
-        "太平洋.*陌生号码",
-        "太平洋.*风波",
-        "太平洋.*骗",
-        "太平洋.*麻烦",
-        "太平洋.*黑",
-        "恐怖.*太平洋",
-        "扰乱.*市场.*太平洋",
-        "投诉.*太平洋",
-        "最差.*太平洋",
-        "游说.*太平洋",
-        "虚假.*太平洋",
-        "调查.*太平洋",
-        "责令.*太平洋",
-        "远离.*太平洋",
-        "违法.*太平洋",
-        "骗.*太平洋",
-        "黑.*太平洋"
+
     ]
     ls_type = len(ls) * [1]
     df = pd.DataFrame({"type": ls_type, "content": ls})
@@ -236,53 +53,73 @@ def t3():
     print(df)
 
 
-def t4():
-    s = "s<so>ogao"
-    ls = s.split("<so>")
-    print(ls)
-
-
-def sk():
-    pass
-
-
-def t5(obj):
-    from urllib import parse
-    import hashlib
-    url = "http://api.map.baidu.com/place/v2/search?query=" + obj + "&region=289&city_limit=true&output=json&ak=1wqVM7ZDWaTLkqBacqKhO15W3zl7zB24&scope=1&page_size=20&page_num=1"
-    resp1 = requests.get(url)
-    resp1_str = resp1.json()
-    res = len(resp1_str.get("results"))
-    print(res)
-    return resp1_str
-
-
-def t6():
-    url = "https://sh.centanet.com/xiaoqu/xq-pebawewaws"
+def req():
+    url = "https://sh.5i5j.com/xiaoqu/"
+    req = requests.session()
     headers = {
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-        'Accept-Encoding': '*/*',
-        'accept-language': 'gzip',
-        'content-type': 'charset=utf8',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-        'Cookie': "gr_user_id=8cfc279d-37f1-4214-a9c4-3bc18729c385; grwng_uid=96cd6356-a60d-4b6b-ab22-361f1d1d839a; Y190cmFja2lk=73a9977002ec49b68dcc0fdde38ccc17; acw_tc=65597d1615705879540916094ee97fc1cd6e308264fee86e78dba6a105; Hm_lvt_219872fb6de637cac5884769682da5ad=1570587955,1571127896,1572328984; gioClientCookie=d29e91b3-d697-4177-a822-38ffe0ab608d; _pk_ref.10.5e68=%5B%22%22%2C%22%22%2C1572418167%2C%22http%3A%2F%2Fdefault.centanet.com%2F%22%5D; _pk_ses.10.5e68=*;_pk_id.10.5e68=91dbe8d1a8824461.1570587955.18.1572419485.1572328990.; dft034f=Wu%2FMiTlp99s0GdWA9dWmKg__; Hm_lpvt_219872fb6de637cac5884769682da5ad=1572419485",
+        'Accept': '*/*',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+        # 'Cache-Control': 'max-age=0',
+        'Connection': 'keep-alive',
+        'Cookie': "smidV2=20191008141508bf80bc8aac216b0c6563b998e96f665600d9e27936cc54430; PHPSESSID=2m897hkmnvg19b84uuru7n30s4; domain=sh; xiaoqu_BROWSES=466206; yfx_c_g_u_id_10000001=_ck20051416434515338352286500476; yfx_f_l_v_t_10000001=f_t_1589445825532__r_t_1589445825532__v_t_1589445825532__r_c_0; __TD_deviceId=79CN1BOAF2IBI6B7; _ga=GA1.2.1534363482.1589445826; _gid=GA1.2.346956861.1589445826; gr_user_id=68ce68d9-61d2-4a91-a443-c170c77f65d4; 8fcfcf2bd7c58141_gr_session_id=eb1eff65-bd90-4dc0-8d62-15a4562c7880; Hm_lvt_94ed3d23572054a86ed341d64b267ec6=1589445826; 8fcfcf2bd7c58141_gr_session_id_eb1eff65-bd90-4dc0-8d62-15a4562c7880=true; grwng_uid=515aed24-b908-4ad9-b4aa-532356190486; _Jo0OQK=6D4201B4F950030F5FBB44B959AAE4E8055F495A714D81A7FA4B3BB8E726BFB9FFE4C3C869A4F418060C2CC03D4E4791BB06401EF0E90F2764088C5CF251BD29B69A3A6B6373DCEA275A28E4E02FA79F6B8A28E4E02FA79F6B83EF3BA90F9FD50EFC8DA892D59239CA2GJ1Z1Mg==; a6dc0a476ad768fdfba0fe22cba335f1_pc=TBYRRFZKXlNdAUFbEANUDgQJUQYDBwUNQ08VXF1RDgtRXVUSChIBBQkHCAQFAwcABRIcEkVDVUJ5VBIKEgkHBwYJCQcSHBJYVVFUWV1XEgoSEhwSRF9bVV4SChJVSXoAVWhxWX9ZentmAWFZfHN6WFJ3U1l_WXp5ZUp5AX5ZeUN5XUAAUWN5BnladVlWYR5VSXpAUwN9WX9ZegZRd3ZFagN-WFJZeUN5XUAAUWN5BnladVl8c3pAaWhhWX9adQF_dFsAfnRpSn5KYUN5XXYBanN5BnleRFN5XmZAanZHWX9cR1l_ZFMDflpbBX4BR1l8dkdZUncJXlFnBUVpZwFcaHN5BmhzelN5WUhTeV0FQGkCREVpZwFcaHN5BmhzeUh-ZFsDf3RhAX1KU0d-ZkdZfHZHWWpnAVhRZ0hTeVpARVRnSEN8dkdZagJmRWp3Zkloc3kGUl5mQ1JzSFN5XnpcagJcRlJcR1l_XQUBUndHQ2hzelpRaGIFaHN5BmhzeQVoc3lDaHN6X2pndltRZwFeaHN5BlJeZkNSc0hTeV1cRVRdXABRZwVeaQIJW2pmR1l_XQUBUndHQ2hzeklqZ1RbaWhiXGhzeQZoc3lIfmRXBX50YQJ9SlMAaHN5Q2hzekpUd3YAVGh-U3laX0h8dkdZU3d2SlMBVEZTXWJTeVpAU3ldfl19Z2UCfmd9An1deQB-dHVIfnd6XX1dZllpZGlIfQJhBH5aWwVqd3kEaHN5Q2hzekppZ0gAaHN5BmhzeUh9Wn0AfmRqU3leAFl8c3pKVGd5WX9ZekpUZ3pBamd-AHleAB5iX1EHXGp4AUN7A0VlUkdJUUJ0CUVVVmZ9b31pCENoQmF9Q3sdRwV1AgFHEhwSQ1FcRBIKEgECAwQFBhJN; user_info=TBYRRFZKXlNdAUFbEANUDgQJUQYDBwUNQ08VXF1RDgtRXVUSChIBBQkHCAQFAwcABRIcEkVDVUJ5VBIKEgkHBwYJCQcSHBJYVVFUWV1XEgoSEhwSRF9bVV4SChJVSXoAVWhxWX9ZentmAWFZfHN6WFJ3U1l_WXp5ZUp5AX5ZeUN5XUAAUWN5BnladVlWYR5VSXpAUwN9WX9ZegZRd3ZFagN-WFJZeUN5XUAAUWN5BnladVl8c3pAaWhhWX9adQF_dFsAfnRpSn5KYUN5XXYBanN5BnleRFN5XmZAanZHWX9cR1l_ZFMDflpbBX4BR1l8dkdZUncJXlFnBUVpZwFcaHN5BmhzelN5WUhTeV0FQGkCREVpZwFcaHN5BmhzeUh-ZFsDf3RhAX1KU0d-ZkdZfHZHWWpnAVhRZ0hTeVpARVRnSEN8dkdZagJmRWp3Zkloc3kGUl5mQ1JzSFN5XnpcagJcRlJcR1l_XQUBUndHQ2hzelpRaGIFaHN5BmhzeQVoc3lDaHN6X2pndltRZwFeaHN5BlJeZkNSc0hTeV1cRVRdXABRZwVeaQIJW2pmR1l_XQUBUndHQ2hzeklqZ1RbaWhiXGhzeQZoc3lIfmRXBX50YQJ9SlMAaHN5Q2hzekpUd3YAVGh-U3laX0h8dkdZU3d2SlMBVEZTXWJTeVpAU3ldfl19Z2UCfmd9An1deQB-dHVIfnd6XX1dZllpZGlIfQJhBH5aWwVqd3kEaHN5Q2hzekppZ0gAaHN5BmhzeUh9Wn0AfmRqU3leAFl8c3pKVGd5WX9ZekpUZ3pBamd-AHleAB5iX1EHXGp4AUN7A0VlUkdJUUJ0CUVVVmZ9b31pCENoQmF9Q3sdRwV1AgFHEhwSQ1FcRBIKEgECAwQFBhJN; wiwj_token_ticket=116_233_20_219_15894432009776997; wiwj_token_116_233_20_219_15894432009776997=%7B%22uid%22%3A%229776997%22%7D; tdCookieUid=9776997; 8fcfcf2bd7c58141_gr_last_sent_sid_with_cs1=eb1eff65-bd90-4dc0-8d62-15a4562c7880; 8fcfcf2bd7c58141_gr_last_sent_cs1=9776997; yfx_s_u_id_10000001=9776997; yfx_s_u_name_10000001=15978453705; _gat=1; 8fcfcf2bd7c58141_gr_cs1=9776997; Hm_lpvt_94ed3d23572054a86ed341d64b267ec6=1589446374; C3VK=e7d741",
+        'Host': 'sh.5i5j.com',
+        # 'Referer': 'https://sh.5i5j.com/ershoufang/',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/537.75.14",
     }
-    res = requests.get(url=url, headers=headers)
+    res = req.get(url=url, headers=headers)
+    cookies = req.cookies
     res_extract = res.content.decode("utf8", 'ignore')
+
     # res.encoding = "UTF8"
+    print(cookies)
     print(res_extract)
 
-def t7():
-    a =None
-    if "" in a:
-        print(a)
+
+def sql():
+    from sqlalchemy.types import NVARCHAR, INT, DATETIME
+    import pandas as pd
+    import pyodbc
+    import pymssql
+    from sqlalchemy import create_engine
+    dtype = {
+        "id_third": INT,
+        "id_tw": INT,
+    }
+    host = '10.10.202.13'
+    user = 'bigdata_user'
+    password = 'ulyhx3rxqhtw'
+    database = 'TWSpider'
+    with pymssql.connect(host=host, database=database,
+                         user=user, password=password, charset="utf8") as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("select count(*) as n from house_rank")
+            res = cursor.fetchone()[0]
+            if res:
+                print(res)
+    # df = pd.DataFrame(columns=['one', 'two', 'three'])
+    # print(df)
+    # df.to_sql("test", con=engine_res, if_exists="replace", index=False,
+    #           dtype=dtype)
+
+
+def item():
+    s = '''
+    
+    中层
+                                        / 33层（
+    '''
+    s1 = '  中楼层 (共6层) '
+    res = re.search("(.*)\s+\(", s1).group(1).strip()
+    print(res)
 
 
 if __name__ == "__main__":
-    # t_req_content()
-    # res = t5("链家地产(高")
-    # print(res)
-    t7()
+    req()
 
 '''
 yum install -y chkconfig python bind-utils psmisc libxslt zlib sqlite cyrus-sasl-plain cyrus-sasl-qssapi fuse fuse-libs redhat-lsb

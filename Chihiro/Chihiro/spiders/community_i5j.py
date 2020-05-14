@@ -29,7 +29,7 @@ class Chihiro(scrapy.Spider):
             'Accept': '*/*',
             'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'zh-CN,zh;q=0.9',
-            'Cache-Control': 'max-age=0',
+            # 'Cache-Control': 'max-age=0',
             'Connection': 'keep-alive',
             # 'Cookie': cookie,
             'Host': 'sh.5i5j.com',
@@ -37,7 +37,8 @@ class Chihiro(scrapy.Spider):
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-Site': 'same-origin',
             'Sec-Fetch-User': '?1',
-            'Upgrade-Insecure-Requests': '1'
+            'Upgrade-Insecure-Requests': '1',
+            # 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
         },
         "DOWNLOAD_DELAY": 0.3,
         "CONCURRENT_REQUESTS": 5,
@@ -45,6 +46,7 @@ class Chihiro(scrapy.Spider):
         "RETRY_TIMES": 3,
         "DOWNLOADER_MIDDLEWARES": {
             # 'Chihiro.middleware_request.ChihiroDownloaderMiddleware': 543,
+            # 'Chihiro.middleware_request.UserAgent_Middleware': 500,
             'Chihiro.middleware_request.ChromeDownloaderMiddleware': 543,
         },
         # 清洗参数
@@ -54,7 +56,7 @@ class Chihiro(scrapy.Spider):
         },
         # 业务参数
         # "ITEM_PIPELINES": {
-        #     'Chihiro.middleware_sql.ChihiroPipeline': 300,
+        #     'Chihiro.middleware_sql.CommunityPipeline': 300,
         # },
         # 错误记录
         # ERROR_RECORD = True

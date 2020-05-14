@@ -802,6 +802,14 @@ class RankHanle(object):
             res_match_is_sql = res_match.get("res_match_is_sql")
             if not res_match_is.empty:
                 res_match_is.loc[:, 'star_level'] = 5
+                res_match_is = pd.merge(
+                    left=res_match_is, right=house_third.loc[:, self.id_third_resource], sort=False,
+                    how='left'
+                )
+                res_match_is = pd.merge(
+                    left=res_match_is, right=house_tw.loc[:, self.id_tw_estate], sort=False,
+                    how='left'
+                )
                 res_match_is_sql = res_match_is_sql.append(res_match_is)
             return res_match_is_sql
         else:
@@ -901,15 +909,19 @@ class MatchRank:
         self.cd = ClearDate()
         self.engine_third_house = create_engine('mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
         if self.flag_anjuke:
-            self.house_rank = 'house_rank_anjuke'
+            self.house_rank = "house_rank_anjuke"
+            self.house_rank_temp = "house_rank_temp_anjuke"
+            self.house_rank_old = 'house_rank_old_anjuke'
             self.house_rank_new = 'house_rank_new_anjuke'
-            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=5000)
+            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=10000)
             # self.sql_str_day = "select DISTINCT RoomId as id_third,PropertyAddress,PropertyCommunity,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit from ThirdHouseResource"
             self.sql_str_day = "select DISTINCT RoomId as id_third,PropertyAddress,PropertyCommunity,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit,Resource as resource from ThirdHouseResource WHERE (HouseStatus='可售' or HouseStatus='可租') and Resource ='安居客'"
         else:
             self.house_rank = 'house_rank'
+            self.house_rank_temp = 'house_rank_temp'
+            self.house_rank_old = 'house_rank_old'
             self.house_rank_new = 'house_rank_new'
-            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=50000)
+            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=10000)
             # self.sql_str_day = "select DISTINCT RoomId as id_third,PropertyAddress,PropertyCommunity,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit from ThirdHouseResource WHERE RoomId not in (select id_third from house_rank GROUP BY id_third)"
             self.sql_str_day = "select DISTINCT RoomId as id_third,PropertyAddress,PropertyCommunity,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit,Resource as resource from ThirdHouseResource WHERE (HouseStatus='可售' or HouseStatus='可租') and Resource !='安居客'"
 
@@ -917,14 +929,14 @@ class MatchRank:
         if self.flag_anjuke:
             house_third_list = pd.read_sql(
                 self.sql_str_day,
-                self.engine_third_house, chunksize=5000)
+                self.engine_third_house, chunksize=10000)
         else:
             house_third_list = pd.read_sql(
                 self.sql_str_day,
-                self.engine_third_house, chunksize=50000)
+                self.engine_third_house, chunksize=10000)
         res_match_is_sql = pd.DataFrame(
             columns=["id_third", "id_tw", 'id_estate', 'resource', "star_level", "input_time"])
-        res_match_is_sql.to_sql(self.house_rank_new, con=self.rh.engine_res, if_exists="replace", index=False,
+        res_match_is_sql.to_sql(self.house_rank, con=self.rh.engine_res, if_exists="replace", index=False,
                                 dtype=self.rh.dtype)
         for house_third in house_third_list:
             if not house_third.empty:
@@ -967,7 +979,7 @@ class MatchRank:
                     res_match_is_sql = res_match_is_sql.drop_duplicates()
                     input_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     res_match_is_sql.loc[:, 'input_time'] = input_time
-                    res_match_is_sql.to_sql(self.house_rank_new, con=self.rh.engine_res, if_exists="append",
+                    res_match_is_sql.to_sql(self.house_rank, con=self.rh.engine_res, if_exists="append",
                                             index=False,
                                             dtype=self.rh.dtype)
                     id_third_match_is |= set(res_match_is_sql['id_third'].to_list())
@@ -985,7 +997,7 @@ class MatchRank:
                     res_match_not_sql.loc[:, 'input_time'] = input_time
                     res_match_not_sql.loc[:, 'id_tw'] = None
                     res_match_not_sql.loc[:, 'id_estate'] = None
-                    res_match_not_sql.to_sql(self.house_rank_new, con=self.rh.engine_res, if_exists="append",
+                    res_match_not_sql.to_sql(self.house_rank, con=self.rh.engine_res, if_exists="append",
                                              index=False,
                                              dtype=self.rh.dtype)
             else:
@@ -1024,6 +1036,8 @@ if __name__ == '__main__':
             time_start = time.time()
             mr = MatchRank(flag_anjuke=flag_anjuke, host=host, user=user, password=password, database=database)
             house_rank = mr.house_rank
+            house_rank_temp = mr.house_rank_temp
+            house_rank_old = mr.house_rank_old
             house_rank_new = mr.house_rank_new
             print(mr.sql_str_day)
             # print(house_third)
@@ -1032,16 +1046,23 @@ if __name__ == '__main__':
             with pymssql.connect(host=host, database=database,
                                  user=user, password=password, charset="utf8") as conn:
                 with conn.cursor() as cursor:
-                    # 删除house_rank
+                    # 如果新表数据删除house_rank
                     try:
-                        cursor.execute("Drop table if exists {}".format(house_rank))
-                        # 更名house_rank_new 为 house_rank
-                        cursor.execute("EXEC sp_rename '{}', '{}'".format(house_rank_new, house_rank))
-                        conn.commit()
+                        cursor.execute("select count(input_time) as n from {}".format(house_rank))
+                        res = cursor.fetchone()[0]
+                        if res:
+                            cursor.execute("EXEC sp_rename '{}', '{}'".format(house_rank_old, house_rank_temp))
+                            # 更名house_rank_new 为 house_rank
+                            cursor.execute("EXEC sp_rename '{}', '{}'".format(house_rank_new, house_rank_old))
+                            cursor.execute("EXEC sp_rename '{}', '{}'".format(house_rank, house_rank_new))
+                            cursor.execute("Drop table if exists {}".format(house_rank_temp))
+                            conn.commit()
                     except:
                         print("无此数据表")
             time_end = time.time()
             print('totally cost', (time_end - time_start))
 
+
     scheduler.add_job(start, 'interval', days=1, start_date='2020-03-23 00:00:00', misfire_grace_time=10)
     scheduler.start()
+    # start()

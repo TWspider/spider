@@ -9,8 +9,8 @@ from twisted.enterprise import adbapi
 import pandas as pd
 from sqlalchemy import create_engine
 import datetime
+import logging
 from scrapy import Field
-
 
 # 开发5.7
 # 10.55.5.7
@@ -26,6 +26,7 @@ password = 'ulyhx3rxqhtw'
 # password = '123456'
 
 database = 'TWSpider'
+
 
 class ChihiroPipeline(object):
     def __init__(self, dbpool, settings):
@@ -176,4 +177,101 @@ HouseStatus,HouseUrl,HouseDesc,BuildedTime,PubCompany,Agent) values(%s,%s,%s,%s,
 
     def close_spider(self, cursor):
         self._dbpool.runInteraction(self.do_final, cursor)
+        self._dbpool.close()
+
+
+class CommunityPipeline(object):
+    def __init__(self, dbpool, settings):
+        '''
+        :param dbpool:
+        :param settings:
+        '''
+        self._dbpool = dbpool
+        self.PropertyCity = settings.get("PropertyCity")
+        self.Resource = settings.get("Resource")
+        self.engine_third_house = create_engine(
+            'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
+        self.sql_select = '''
+            select count(*) from ThirdCommunityResource WHERE CommunityUrl=%s
+        '''
+        self.sql_insert = '''
+                  Insert into ThirdCommunityResource(InsertTime,CommunityUrl,PropertyCommunity,PropertyAddress,PriceUnit,BuildedTime,BuildingType,PropertyFee
+                  ,PropertyCompany,Developers,TotalBuilding,TotalHouseholds,NearbyStores,PropertyCity,Resource,AreaName,PlateName,AroundSchool,VolumeRatio,GreeningRatio,AroundTraffic
+) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                  '''
+
+    @classmethod
+    def from_settings(cls, settings):
+        '''
+        # 开发5.7
+        # 10.55.5.7
+        # tw_user
+        # 123456
+        # 爬虫13
+        # 10.10.202.13
+        # bigdata_user
+        # ulyhx3rxqhtw
+        :param settings:
+        :return:
+        '''
+
+        dbpool = adbapi.ConnectionPool("pymssql", host=host, database=database,
+                                       user=user, password=password, charset="utf8",
+                                       )
+        return cls(dbpool, settings)
+
+    def process_item(self, item, spider):
+        self._dbpool.runInteraction(self.do_select, item, spider)
+        return item
+
+    def do_insert(self, cursor, item):
+        '''
+        :param cursor:
+        :param item:
+        :return:
+
+        '''
+        cursor.execute(
+            self.sql_insert,
+            (
+                item.get("InsertTime"), item.get("CommunityUrl"),
+                item.get("PropertyCommunity"), item.get("PropertyAddress"), item.get("PriceUnit"),
+                item.get("BuildedTime"), item.get("BuildingType"), item.get("PropertyFee"), item.get("PropertyCompany"),
+                item.get("Developers"), item.get("TotalBuilding"),
+                item.get("TotalHouseholds"), item.get("NearbyStores"), item.get("PropertyCity"),
+                item.get("Resource"), item.get("AreaName"), item.get("PlateName"), item.get("AroundSchool"),
+                item.get("VolumeRatio"), item.get("GreeningRatio"), item.get("AroundTraffic"),
+            )
+        )
+
+    def do_select(self, cursor, item, spider):
+        '''
+        if 存在
+        :param cursor:
+        :param item:
+        :param spider:
+        :return:
+        '''
+        t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        item.fields["InsertTime"] = Field()
+        item.fields["PropertyCity"] = Field()
+        item.fields["Resource"] = Field()
+        item["InsertTime"] = t
+        item["PropertyCity"] = self.PropertyCity
+        item["Resource"] = self.Resource
+        cursor.execute(self.sql_select, (item.get("CommunityUrl")))
+        flag = cursor.fetchone()[0]
+        if flag == 0:
+            print("新增小区：{}".format(item.get("PropertyCommunity")))
+            self.do_insert(cursor, item)
+        else:
+            print("历史小区：{}".format(item.get("PropertyCommunity")))
+
+    # def do_final(self, cursor, spider):
+    #     cursor.execute("Drop table if exists {}".format("ThirdCommunityResource"))
+    #     # 更名house_rank_new 为 house_rank
+    #     cursor.execute("EXEC sp_rename '{}', '{}'".format("ThirdCommunityResourceNew", "ThirdCommunityResource"))
+
+    def close_spider(self, cursor):
+        # self._dbpool.runInteraction(self.do_final, cursor)
         self._dbpool.close()

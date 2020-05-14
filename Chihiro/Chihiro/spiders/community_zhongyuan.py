@@ -42,9 +42,9 @@ class Chihiro(scrapy.Spider):
             # 'Chihiro.middleware_item.RequestsMiddleware': 500,
         },
         # 业务参数
-        # "ITEM_PIPELINES": {
-        #     'Chihiro.middleware_sql.ChihiroPipeline': 300,
-        # },
+        "ITEM_PIPELINES": {
+            'Chihiro.middleware_sql.CommunityPipeline': 300,
+        },
         # 错误记录
         # ERROR_RECORD = True
         # 日志
@@ -129,7 +129,7 @@ class Chihiro(scrapy.Spider):
         item1["PropertyCommunity"] = PropertyCommunity
         PriceUnit = response.xpath("//div[@class='Ap_content']/span/text()").extract_first()
         if PriceUnit:
-            PriceUnit = int(float(PriceUnit)*10000)
+            PriceUnit = str(float(PriceUnit)*10000)
         item1.fields["PriceUnit"] = Field()
         item1["PriceUnit"] = PriceUnit
 
