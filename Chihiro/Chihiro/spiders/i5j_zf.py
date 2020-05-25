@@ -12,7 +12,9 @@ from scrapy import Item, Field
 from selenium import webdriver
 import sys
 import time
-
+import pandas as pd
+from sqlalchemy import create_engine
+import datetime
 
 class Chihiro(scrapy.Spider):
     name = 'i5j_zf'
@@ -67,6 +69,25 @@ class Chihiro(scrapy.Spider):
         # "LOG_LEVEL": 'INFO',
         # "LOG_FILE": "Chihiro.txt"
     }
+
+    def __init__(self):
+        host = '10.10.202.13'
+        user = 'bigdata_user'
+        password = 'ulyhx3rxqhtw'
+
+        # host = '10.55.5.7'
+        # user = 'tw_user'
+        # password = '123456'
+
+        database = 'TWSpider'
+        self.scaned_url_list = []
+        self.engine_third_house = create_engine(
+            'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
+        self.sql_select = pd.read_sql(
+            "select HouseUrl,HouseStatus from ThirdHouseResource where Resource='%s' and RentalStatus = %s" % (
+                self.Resource, self.RentalStatus),
+            self.engine_third_house)
+        self.url_list = self.sql_select["HouseUrl"].tolist()
 
     def parse(self, response):
         region_xpath_list = response.xpath(
@@ -180,6 +201,8 @@ class Chihiro(scrapy.Spider):
                 rental_way = info_grey.replace("出租方式：", "")
                 item.fields["LeaseType"] = Field()
                 item["LeaseType"] = rental_way
+            if self.is_finished():
+                self.do_final()
             yield item
         next_page_handle = response.xpath("//a[@class='cPage'][1]/@href").extract_first()
         if next_page_handle:
@@ -188,3 +211,34 @@ class Chihiro(scrapy.Spider):
                                  meta={"region": region, "plate": plate})
 
 
+    def is_finished(self):
+        if self.crawler.engine.downloader.active:
+            return False
+        if self.crawler.engine.slot.start_requests is not None:
+            return False
+        if self.crawler.engine.slot.scheduler.has_pending_requests():
+            return False
+        return True
+
+    def do_final(self):
+        '''
+        更新可售为已售、可租为已租
+        :param cursor:
+        :param spider:
+        :return:
+        '''
+        housing_trade_list = [x for x in self.url_list if x not in self.scaned_url_list]
+        for housing_url in housing_trade_list:
+            yield scrapy.Request(url=housing_url, callback=self.house_status_handle)
+
+    def house_status_handle(self, response):
+        # 验证码
+        url = response.url
+        item = {}
+        flag = response.xpath("//h1[@class='house-tit']/text()").extract_first()
+        if flag:
+            pass
+        else:
+            item["flag_remaining"] = True
+            item["HouseUrl"] = url
+            yield item

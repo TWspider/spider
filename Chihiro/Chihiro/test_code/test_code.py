@@ -53,31 +53,66 @@ def sql_pandas():
     print(df)
 
 
-def req():
-    url = "https://sh.5i5j.com/xiaoqu/"
-    req = requests.session()
+def req(i):
+    from fake_useragent import UserAgent
+    import json
+    ua = UserAgent()
+    try:
+        headers = ua.random
+        # print(ua.random)
+    except:
+        pass
+    url = "http://www.taiwu.com/siteapi/outnetfront/api/property/PropertyListController/getPropertySecondHandList"
+    # req = requests.session()
     headers = {
-        'Accept': '*/*',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Accept-Language': 'zh-CN,zh;q=0.9',
-        # 'Cache-Control': 'max-age=0',
-        'Connection': 'keep-alive',
-        'Cookie': "smidV2=20191008141508bf80bc8aac216b0c6563b998e96f665600d9e27936cc54430; PHPSESSID=2m897hkmnvg19b84uuru7n30s4; domain=sh; xiaoqu_BROWSES=466206; yfx_c_g_u_id_10000001=_ck20051416434515338352286500476; yfx_f_l_v_t_10000001=f_t_1589445825532__r_t_1589445825532__v_t_1589445825532__r_c_0; __TD_deviceId=79CN1BOAF2IBI6B7; _ga=GA1.2.1534363482.1589445826; _gid=GA1.2.346956861.1589445826; gr_user_id=68ce68d9-61d2-4a91-a443-c170c77f65d4; 8fcfcf2bd7c58141_gr_session_id=eb1eff65-bd90-4dc0-8d62-15a4562c7880; Hm_lvt_94ed3d23572054a86ed341d64b267ec6=1589445826; 8fcfcf2bd7c58141_gr_session_id_eb1eff65-bd90-4dc0-8d62-15a4562c7880=true; grwng_uid=515aed24-b908-4ad9-b4aa-532356190486; _Jo0OQK=6D4201B4F950030F5FBB44B959AAE4E8055F495A714D81A7FA4B3BB8E726BFB9FFE4C3C869A4F418060C2CC03D4E4791BB06401EF0E90F2764088C5CF251BD29B69A3A6B6373DCEA275A28E4E02FA79F6B8A28E4E02FA79F6B83EF3BA90F9FD50EFC8DA892D59239CA2GJ1Z1Mg==; a6dc0a476ad768fdfba0fe22cba335f1_pc=TBYRRFZKXlNdAUFbEANUDgQJUQYDBwUNQ08VXF1RDgtRXVUSChIBBQkHCAQFAwcABRIcEkVDVUJ5VBIKEgkHBwYJCQcSHBJYVVFUWV1XEgoSEhwSRF9bVV4SChJVSXoAVWhxWX9ZentmAWFZfHN6WFJ3U1l_WXp5ZUp5AX5ZeUN5XUAAUWN5BnladVlWYR5VSXpAUwN9WX9ZegZRd3ZFagN-WFJZeUN5XUAAUWN5BnladVl8c3pAaWhhWX9adQF_dFsAfnRpSn5KYUN5XXYBanN5BnleRFN5XmZAanZHWX9cR1l_ZFMDflpbBX4BR1l8dkdZUncJXlFnBUVpZwFcaHN5BmhzelN5WUhTeV0FQGkCREVpZwFcaHN5BmhzeUh-ZFsDf3RhAX1KU0d-ZkdZfHZHWWpnAVhRZ0hTeVpARVRnSEN8dkdZagJmRWp3Zkloc3kGUl5mQ1JzSFN5XnpcagJcRlJcR1l_XQUBUndHQ2hzelpRaGIFaHN5BmhzeQVoc3lDaHN6X2pndltRZwFeaHN5BlJeZkNSc0hTeV1cRVRdXABRZwVeaQIJW2pmR1l_XQUBUndHQ2hzeklqZ1RbaWhiXGhzeQZoc3lIfmRXBX50YQJ9SlMAaHN5Q2hzekpUd3YAVGh-U3laX0h8dkdZU3d2SlMBVEZTXWJTeVpAU3ldfl19Z2UCfmd9An1deQB-dHVIfnd6XX1dZllpZGlIfQJhBH5aWwVqd3kEaHN5Q2hzekppZ0gAaHN5BmhzeUh9Wn0AfmRqU3leAFl8c3pKVGd5WX9ZekpUZ3pBamd-AHleAB5iX1EHXGp4AUN7A0VlUkdJUUJ0CUVVVmZ9b31pCENoQmF9Q3sdRwV1AgFHEhwSQ1FcRBIKEgECAwQFBhJN; user_info=TBYRRFZKXlNdAUFbEANUDgQJUQYDBwUNQ08VXF1RDgtRXVUSChIBBQkHCAQFAwcABRIcEkVDVUJ5VBIKEgkHBwYJCQcSHBJYVVFUWV1XEgoSEhwSRF9bVV4SChJVSXoAVWhxWX9ZentmAWFZfHN6WFJ3U1l_WXp5ZUp5AX5ZeUN5XUAAUWN5BnladVlWYR5VSXpAUwN9WX9ZegZRd3ZFagN-WFJZeUN5XUAAUWN5BnladVl8c3pAaWhhWX9adQF_dFsAfnRpSn5KYUN5XXYBanN5BnleRFN5XmZAanZHWX9cR1l_ZFMDflpbBX4BR1l8dkdZUncJXlFnBUVpZwFcaHN5BmhzelN5WUhTeV0FQGkCREVpZwFcaHN5BmhzeUh-ZFsDf3RhAX1KU0d-ZkdZfHZHWWpnAVhRZ0hTeVpARVRnSEN8dkdZagJmRWp3Zkloc3kGUl5mQ1JzSFN5XnpcagJcRlJcR1l_XQUBUndHQ2hzelpRaGIFaHN5BmhzeQVoc3lDaHN6X2pndltRZwFeaHN5BlJeZkNSc0hTeV1cRVRdXABRZwVeaQIJW2pmR1l_XQUBUndHQ2hzeklqZ1RbaWhiXGhzeQZoc3lIfmRXBX50YQJ9SlMAaHN5Q2hzekpUd3YAVGh-U3laX0h8dkdZU3d2SlMBVEZTXWJTeVpAU3ldfl19Z2UCfmd9An1deQB-dHVIfnd6XX1dZllpZGlIfQJhBH5aWwVqd3kEaHN5Q2hzekppZ0gAaHN5BmhzeUh9Wn0AfmRqU3leAFl8c3pKVGd5WX9ZekpUZ3pBamd-AHleAB5iX1EHXGp4AUN7A0VlUkdJUUJ0CUVVVmZ9b31pCENoQmF9Q3sdRwV1AgFHEhwSQ1FcRBIKEgECAwQFBhJN; wiwj_token_ticket=116_233_20_219_15894432009776997; wiwj_token_116_233_20_219_15894432009776997=%7B%22uid%22%3A%229776997%22%7D; tdCookieUid=9776997; 8fcfcf2bd7c58141_gr_last_sent_sid_with_cs1=eb1eff65-bd90-4dc0-8d62-15a4562c7880; 8fcfcf2bd7c58141_gr_last_sent_cs1=9776997; yfx_s_u_id_10000001=9776997; yfx_s_u_name_10000001=15978453705; _gat=1; 8fcfcf2bd7c58141_gr_cs1=9776997; Hm_lpvt_94ed3d23572054a86ed341d64b267ec6=1589446374; C3VK=e7d741",
-        'Host': 'sh.5i5j.com',
-        # 'Referer': 'https://sh.5i5j.com/ershoufang/',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'same-origin',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1',
-        'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/537.75.14",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Encoding": "gzip, deflate",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+        "Content-Length": "435",
+        "Content-Type": "application/json;charset=UTF-8",
+        "Cookie": "Hm_lvt_bf7258513fd26ee6d3231554baf1a331=1590384930; Hm_lpvt_bf7258513fd26ee6d3231554baf1a331=1590384980",
+        "Host": "www.taiwu.com",
+        "istravel": '0',
+        "Origin": "http://www.taiwu.com",
+        "Proxy-Connection": "keep-alive",
+        "ref": '0',
+        "Referer": "http://www.taiwu.com/ershoufang/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
     }
-    res = req.get(url=url, headers=headers)
-    cookies = req.cookies
+    data = {
+        "areaCode": "",
+        "averagePrice": [],
+        "buildingAge": [],
+        "buildingDirectionCode": [],
+        "elevatorExist": [],
+        "fixTypeCode": [],
+        "gongge": 1,
+        "intentionalMetroLineCode": "",
+        "layerHighLowTypeCode": [],
+        "leaseMode": [],
+        "leasePriceCode": [],
+        "pageNum": 2,
+        "pageSize": 1000,
+        "propertyLabelFlg": [],
+        "propertySquareCode": [],
+        "propertySquareSort": None,
+        "releaseDateSort": None,
+        "roomNumberType": [],
+        "roomTypeCode": [],
+        "sellPriceCode": [],
+        "sellPriceSort": None,
+        "unitPriceSort": None,
+    }
+    data = json.dumps(data)
+    # print(data)
+    res = requests.post(url=url, headers=headers, data=data)
+    # cookies = req.cookies
+    print(res)
     res_extract = res.content.decode("utf8", 'ignore')
 
     # res.encoding = "UTF8"
-    print(cookies)
-    print(res_extract)
+    # print(cookies)
+    return res_extract
 
 
 def sql():
@@ -108,18 +143,30 @@ def sql():
 
 
 def item():
-    s = '''
-    
-    中层
-                                        / 33层（
-    '''
-    s1 = '  中楼层 (共6层) '
-    res = re.search("(.*)\s+\(", s1).group(1).strip()
-    print(res)
+    a = "34"
+    res = re.split(" |平米|㎡", a)
+    a1 = int(float(res[0]))
+    print(a1)
+    # flag_end = len(self.crawler.engine.slot.scheduler)
+    # t = self
+    # print(dir(t))
+    # print(t)
+    # item = {}
+    # yield item
 
 
 if __name__ == "__main__":
-    req()
+    from concurrent import futures
+
+    with futures.ThreadPoolExecutor(max_workers=17) as executor:
+        result = executor.map(req, range(1, 17))
+        for res in result:
+            pass
+            # print(res)
+    print("-----------")
+    for i in range(1, 11):
+        req(1)
+    # item()
 
 '''
 yum install -y chkconfig python bind-utils psmisc libxslt zlib sqlite cyrus-sasl-plain cyrus-sasl-qssapi fuse fuse-libs redhat-lsb

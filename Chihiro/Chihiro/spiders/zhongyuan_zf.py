@@ -8,7 +8,9 @@ from ..items import ChihiroItem
 import random
 from scrapy.utils.project import get_project_settings
 from scrapy import Item, Field
-
+import pandas as pd
+from sqlalchemy import create_engine
+import datetime
 
 class Chihiro(scrapy.Spider):
     name = 'zhongyuan_zf'
@@ -57,6 +59,24 @@ class Chihiro(scrapy.Spider):
     }
 
     def __init__(self):
+        host = '10.10.202.13'
+        user = 'bigdata_user'
+        password = 'ulyhx3rxqhtw'
+
+        # host = '10.55.5.7'
+        # user = 'tw_user'
+        # password = '123456'
+
+        database = 'TWSpider'
+        self.scaned_url_list = []
+        self.engine_third_house = create_engine(
+            'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
+        self.sql_select = pd.read_sql(
+            "select HouseUrl,HouseStatus from ThirdHouseResource where Resource='%s' and RentalStatus = %s" % (
+                self.Resource, self.RentalStatus),
+            self.engine_third_house)
+        self.url_list = self.sql_select["HouseUrl"].tolist()
+
         self.headers = [
             "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36",
@@ -169,6 +189,8 @@ class Chihiro(scrapy.Spider):
                 item["FixTypeName"] = room_decorate
                 item.fields["BuildedTime"] = Field()
                 item["BuildedTime"] = build_year
+            if self.is_finished():
+                self.do_final()
             yield item
         if next_page_handle:
             next_page = self.base_url + next_page_handle
@@ -176,3 +198,34 @@ class Chihiro(scrapy.Spider):
                                  meta={"plate_url": plate_url, 'region': region,
                                        "plate": plate}, headers=self.get_headers())
 
+    def is_finished(self):
+        if self.crawler.engine.downloader.active:
+            return False
+        if self.crawler.engine.slot.start_requests is not None:
+            return False
+        if self.crawler.engine.slot.scheduler.has_pending_requests():
+            return False
+        return True
+
+    def do_final(self):
+        '''
+        更新可售为已售、可租为已租
+        :param cursor:
+        :param spider:
+        :return:
+        '''
+        housing_trade_list = [x for x in self.url_list if x not in self.scaned_url_list]
+        for housing_url in housing_trade_list:
+            yield scrapy.Request(url=housing_url, callback=self.house_status_handle, headers=self.get_headers())
+
+    def house_status_handle(self, response):
+        # 验证码
+        url = response.url
+        item = {}
+        flag = response.xpath("//div[@class='detail_houseInfo_box']/div/h3/text()").extract_first()
+        if flag:
+            pass
+        else:
+            item["flag_remaining"] = True
+            item["HouseUrl"] = url
+            yield item

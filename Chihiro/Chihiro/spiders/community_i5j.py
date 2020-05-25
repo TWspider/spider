@@ -41,28 +41,29 @@ class Chihiro(scrapy.Spider):
             # 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
         },
         "DOWNLOAD_DELAY": 0.3,
-        "CONCURRENT_REQUESTS": 5,
+        "CONCURRENT_REQUESTS": 2,
         "RETRY_HTTP_CODES": [302, 403, 502],
         "RETRY_TIMES": 3,
         "DOWNLOADER_MIDDLEWARES": {
             # 'Chihiro.middleware_request.ChihiroDownloaderMiddleware': 543,
-            # 'Chihiro.middleware_request.UserAgent_Middleware': 500,
-            'Chihiro.middleware_request.ChromeDownloaderMiddleware': 543,
+            'Chihiro.middleware_request.UserAgent_Middleware': 500,
+            'Chihiro.middleware_request.ChromeDownloaderMiddleware': None,
+            'Chihiro.middleware_request.IpAgent_Middleware': 333,
         },
         # 清洗参数
         "SPIDER_MIDDLEWARES": {
             # 'Chihiro.middleware_item.ChihiroSpiderMiddleware': 500,
-
         },
         # 业务参数
-        # "ITEM_PIPELINES": {
-        #     'Chihiro.middleware_sql.CommunityPipeline': 300,
-        # },
+        "ITEM_PIPELINES": {
+            'Chihiro.middleware_sql.CommunityPipeline': 300,
+        },
         # 错误记录
         # ERROR_RECORD = True
         # 日志
-        # "LOG_LEVEL": 'INFO',
-        # "LOG_FILE": "Chihiro.txt"
+        "LOG_LEVEL": 'INFO',
+        "LOG_FILE": "Community.txt",
+        # "COOKIES_ENABLED": True
     }
 
     def parse(self, response):
@@ -107,7 +108,7 @@ class Chihiro(scrapy.Spider):
             item.fields["PropertyCommunity"] = Field()
             item["PropertyCommunity"] = PropertyCommunity
             yield scrapy.Request(url=CommunityUrl, callback=self.handle_1,
-                                     meta={"item": deepcopy(item)})
+                                 meta={"item": deepcopy(item)})
 
         current_page = response.xpath("//div[@class='pageBox']/div/a[@class='cur']/text()").extract_first()
         total_page = response.xpath("//div[contains(@class,'total-box')]/span/text()").extract_first()
@@ -146,7 +147,7 @@ class Chihiro(scrapy.Spider):
             "//div[@class='xqsaleinfo']/ul/li[2]/span/text()").extract_first()
         NearbyStores = response.xpath(
             "//div[@class='xqsaleinfo']/ul/li[6]/span/text()").extract_first()
-        AroundTraffic =response.xpath("//div[@class='xqsaleinfo']/ul/li[5]/span/text()").extract_first()
+        AroundTraffic = response.xpath("//div[@class='xqsaleinfo']/ul/li[5]/span/text()").extract_first()
         item1.fields["PropertyAddress"] = Field()
         item1["PropertyAddress"] = PropertyAddress
         item1.fields["PriceUnit"] = Field()
@@ -170,4 +171,3 @@ class Chihiro(scrapy.Spider):
         item1["AroundTraffic"] = AroundTraffic
         item1.update(item)
         yield item1
-

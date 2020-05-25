@@ -29,8 +29,8 @@ class Chihiro(scrapy.Spider):
             'accept-language': 'gzip',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
         },
-        # "DOWNLOAD_DELAY": 0.3,
-        # "CONCURRENT_REQUESTS": 1,
+        "DOWNLOAD_DELAY": 0.3,
+        "CONCURRENT_REQUESTS": 10,
         "RETRY_HTTP_CODES": [302, 403, 502],
         "RETRY_TIMES": 3,
         "DOWNLOADER_MIDDLEWARES": {
@@ -48,8 +48,8 @@ class Chihiro(scrapy.Spider):
         # 错误记录
         # ERROR_RECORD = True
         # 日志
-        # "LOG_LEVEL": 'INFO',
-        # "LOG_FILE": "Chihiro.txt"
+        "LOG_LEVEL": 'INFO',
+        "LOG_FILE": "Community.txt"
     }
 
 

@@ -69,8 +69,12 @@ class UserAgent_Middleware():
             'Lynx/2.8.5rel.1 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/1.2.9',
         ]
     def process_request(self, request, spider):
-        # ua = UserAgent()
-        request.headers['User-Agent'] = random.choice(self.headers)
+        ua = UserAgent()
+        try:
+            useragent = ua.random
+        except:
+            useragent = random.choice(self.headers)
+        request.headers['User-Agent'] = useragent
 
 
 import base64
@@ -81,13 +85,13 @@ class IpAgent_Middleware():
         # ua = UserAgent()
         # request.headers['User-Agent'] = ua.random
         request.meta['proxy'] = "https://t18449818935473:jg4cg2j9@tps161.kdlapi.com:15818/"
+        # print(request.meta['proxy'])
         # request.headers["Proxy-Authorization"] = proxyAuth
 
 
 import requests
 import time
 import random
-from scrapy.http import HtmlResponse
 
 
 class RequestsMiddleware():

@@ -48,8 +48,8 @@ class Chihiro(scrapy.Spider):
         # 错误记录
         # ERROR_RECORD = True
         # 日志
-        # "LOG_LEVEL": 'INFO',
-        # "LOG_FILE": "Chihiro.txt"
+        "LOG_LEVEL": 'INFO',
+        "LOG_FILE": "Community.txt"
     }
 
     def __init__(self):
@@ -129,7 +129,7 @@ class Chihiro(scrapy.Spider):
         item1["PropertyCommunity"] = PropertyCommunity
         PriceUnit = response.xpath("//div[@class='Ap_content']/span/text()").extract_first()
         if PriceUnit:
-            PriceUnit = str(float(PriceUnit)*10000)
+            PriceUnit = str(round(float(PriceUnit)*10000))
         item1.fields["PriceUnit"] = Field()
         item1["PriceUnit"] = PriceUnit
 

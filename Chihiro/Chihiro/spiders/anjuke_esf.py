@@ -14,11 +14,13 @@ from scrapy import Item, Field
 
 from scrapy.loader import ItemLoader
 from ..items import ChihiroItem
-
+import pandas as pd
+from sqlalchemy import create_engine
+import datetime
 
 class Chihiro(scrapy.Spider):
     name = 'anjuke_esf'
-    start_urls = ['http://m.anjuke.com/sh/sale/?from=anjuke_home/']
+    start_urls = ['https://m.anjuke.com/sh/sale/?from=anjuke_home/']
     PropertyCity = '上海'
     Resource = '安居客'
     RentalStatus = 0
@@ -56,12 +58,12 @@ class Chihiro(scrapy.Spider):
             # "x-requested-with": "XMLHttpRequest",
             "Host": "m.anjuke.com"
         },
-        "DOWNLOAD_DELAY": 0.5,
-        "CONCURRENT_REQUESTS": 3,
+        "DOWNLOAD_DELAY": 0.2,
+        "CONCURRENT_REQUESTS": 5,
         "RETRY_HTTP_CODES": [403, 502],
         "RETRY_TIMES": 1,
         "DOWNLOADER_MIDDLEWARES": {
-            # 'Chihiro.middleware_request.IpAgent_Middleware': 543,
+            'Chihiro.middleware_request.IpAgent_Middleware': 543,
         },
         # 清洗参数
         "SPIDER_MIDDLEWARES": {
@@ -95,6 +97,25 @@ class Chihiro(scrapy.Spider):
           'yangpu': '杨浦',
           'songjiang': '松江',
           'xuhui': '徐汇'}
+
+    def __init__(self):
+        host = '10.10.202.13'
+        user = 'bigdata_user'
+        password = 'ulyhx3rxqhtw'
+
+        # host = '10.55.5.7'
+        # user = 'tw_user'
+        # password = '123456'
+
+        database = 'TWSpider'
+        self.scaned_url_list = []
+        self.engine_third_house = create_engine(
+            'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
+        self.sql_select = pd.read_sql(
+            "select HouseUrl,HouseStatus from ThirdHouseResource where Resource='%s' and RentalStatus = %s" % (
+                self.Resource, self.RentalStatus),
+            self.engine_third_house)
+        self.url_list = self.sql_select["HouseUrl"].tolist()
 
     def parse(self, response):
         href_list = response.xpath(
@@ -221,6 +242,38 @@ class Chihiro(scrapy.Spider):
             item['HouseDirection'] = response.xpath('//ul[@class="info-list"]//li[2]/text()').extract_first().strip()
         except:
             item['HouseDirection'] = None
+        if self.is_finished():
+            self.do_final()
         yield item
-        # except Exception as e:
-        #     print(e)
+
+    def is_finished(self):
+        if self.crawler.engine.downloader.active:
+            return False
+        if self.crawler.engine.slot.start_requests is not None:
+            return False
+        if self.crawler.engine.slot.scheduler.has_pending_requests():
+            return False
+        return True
+
+    def do_final(self):
+        '''
+        更新可售为已售、可租为已租
+        :param cursor:
+        :param spider:
+        :return:
+        '''
+        housing_trade_list = [x for x in self.url_list if x not in self.scaned_url_list]
+        for housing_url in housing_trade_list:
+            yield scrapy.Request(url=housing_url, callback=self.house_status_handle)
+
+    def house_status_handle(self, response):
+        # 验证码
+        url = response.url
+        item = {}
+        flag = response.xpath("//div[@class='house-address']/text()").extract_first()
+        if flag:
+            pass
+        else:
+            item["flag_remaining"] = True
+            item["HouseUrl"] = url
+            yield item
