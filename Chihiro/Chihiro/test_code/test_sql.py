@@ -2,6 +2,7 @@ import pymssql
 from sqlalchemy import create_engine
 from sqlalchemy.types import VARCHAR
 import time
+import pandas as pd
 
 
 class TestSql:
@@ -9,13 +10,20 @@ class TestSql:
         pass
 
     def test(self):
-        import pyodbc
-        # conn = pyodbc.connect(r'DRIVER={SQL Server Native Client 11.0};SERVER=test;DATABASE=test;UID=user;PWD=password')
-        # print(conn)
-        a = None
-        a.update({
-            'k': 1
-        })
+        from sqlalchemy import create_engine
+        host = '10.10.202.13'
+        user = 'bigdata_user'
+        password = 'ulyhx3rxqhtw'
+        database = 'TWSpider'
+        self.engine_third_house = create_engine('mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
+        sql = "select DISTINCT RoomId from ThirdHouseRankAnjuke"
+        res = pd.read_sql(sql, con=self.engine_third_house)["ThirdId"].astype('str').tolist()
+        res = ','.join(res)
+        print(res)
+        sql = "select DISTINCT RoomId from ThirdHouseRankAnjuke_old where RoomId not in ({ls})".format(ls=res)
+        print(sql)
+        res = pd.read_sql(sql, con=self.engine_third_house)
+        print(res)
 
 
 if __name__ == '__main__':

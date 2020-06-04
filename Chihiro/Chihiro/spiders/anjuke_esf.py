@@ -4,6 +4,7 @@ from io import BytesIO
 from html.parser import HTMLParser
 import datetime
 import pymssql
+import logging
 from fontTools.ttLib.ttFont import TTFont
 import base64
 from copy import deepcopy
@@ -243,28 +244,21 @@ class Chihiro(scrapy.Spider):
         except:
             item['HouseDirection'] = None
         if self.is_finished():
-            self.do_final()
+            pipeline = self.crawler.spider.pipeline
+            scaned_url_list = pipeline.scaned_url_list
+            url_list = pipeline.url_list
+            housing_trade_list = [x for x in url_list if x not in scaned_url_list]
+            logging.info(housing_trade_list)
+            for housing_url in housing_trade_list:
+                yield scrapy.Request(url=housing_url, callback=self.house_status_handle)
         yield item
 
     def is_finished(self):
-        if self.crawler.engine.downloader.active:
-            return False
-        if self.crawler.engine.slot.start_requests is not None:
-            return False
-        if self.crawler.engine.slot.scheduler.has_pending_requests():
+        flag_queue = len(self.crawler.engine.slot.scheduler)
+        if flag_queue:
             return False
         return True
 
-    def do_final(self):
-        '''
-        更新可售为已售、可租为已租
-        :param cursor:
-        :param spider:
-        :return:
-        '''
-        housing_trade_list = [x for x in self.url_list if x not in self.scaned_url_list]
-        for housing_url in housing_trade_list:
-            yield scrapy.Request(url=housing_url, callback=self.house_status_handle)
 
     def house_status_handle(self, response):
         # 验证码

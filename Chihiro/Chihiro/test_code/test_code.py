@@ -23,13 +23,13 @@ def req_chrome():
     driver.find_element_by_xpath("//input[@class='swz']").click()
     res_txt = driver.page_source
     res = Selector(text=res_txt)
-    # source_url_list = res.xpath("//div[@class='txt-box']/h3/a/@href").extract()
+    source_url_list = res.xpath("//div[@class='txt-box']/h3/a/@href").extract()
 
-    # print(res)
-    # driver.find_element_by_xpath("//div[@class='txt-box']/h3/a").click()
-    # print(driver.find_element_by_xpath("//div[@class='txt-box']/h3/a").get(0))
-    # print(driver.find_element(By.XPATH("//div[@class='txt-box']/h3/a")))
-    # print(driver.title)
+    print(res)
+    driver.find_element_by_xpath("//div[@class='txt-box']/h3/a").click()
+    print(driver.find_element_by_xpath("//div[@class='txt-box']/h3/a").get(0))
+    print(driver.find_element(By.XPATH("//div[@class='txt-box']/h3/a")))
+    print(driver.title)
     time.sleep(3)
     driver.close()
 
@@ -143,10 +143,12 @@ def sql():
 
 
 def item():
-    a = "34"
-    res = re.split(" |Æ½Ã×|©O", a)
-    a1 = int(float(res[0]))
-    print(a1)
+    s = 3
+    it = (i for i in range(1, s))
+    for i in it:
+        s += 1
+        print(i)
+
     # flag_end = len(self.crawler.engine.slot.scheduler)
     # t = self
     # print(dir(t))
@@ -156,17 +158,18 @@ def item():
 
 
 if __name__ == "__main__":
-    from concurrent import futures
-
-    with futures.ThreadPoolExecutor(max_workers=17) as executor:
-        result = executor.map(req, range(1, 17))
-        for res in result:
-            pass
-            # print(res)
-    print("-----------")
-    for i in range(1, 11):
-        req(1)
-    # item()
+    pass
+    # from concurrent import futures
+    #
+    # with futures.ThreadPoolExecutor(max_workers=17) as executor:
+    #     result = executor.map(req, range(1, 17))
+    #     for res in result:
+    #         pass
+    #         # print(res)
+    # print("-----------")
+    # for i in range(1, 11):
+    #     req(1)
+    item()
 
 '''
 yum install -y chkconfig python bind-utils psmisc libxslt zlib sqlite cyrus-sasl-plain cyrus-sasl-qssapi fuse fuse-libs redhat-lsb

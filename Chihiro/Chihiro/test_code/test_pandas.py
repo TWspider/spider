@@ -79,30 +79,13 @@ class TestPanda:
         return res
 
     def test(self):
-        # import pyodbc
-        # print(pyodbc.drivers())
-        # df1 = pd.DataFrame({"third": [213, 213], "tw": [213, 213]})
-        # k = ['one', 'two']
-        # res = df1.groupby(k).mean()
-        # print(res)
-        # sql_select.to_sql('test', con=engine, if_exists="append", index=False)
-        a = {"a": ["dsa", None, 333, 444], "b": [1, 2, 3, 3]}
-        a = pd.DataFrame(a)
+        left = pd.DataFrame({'B': [2, 2, 3, 4], 'C': [2, 2, 3, 4], })
+        right = pd.DataFrame({'B': [2, 2, 2, 2], 'D': [2, 2, 3, 4], })
 
-        # print(df)
-        b = a.dropna(subset=['a'])
-        print(b)
-
-        c = pd.merge(a, b, how='left')
-        print(c)
-
-        c["b"] = [1, 2, 3, 5]
-        a = 'dsds'
-        res = re.search("(.*?)/", a).group(1)
-        # c = df.isnull()
-        # print(b.index)
-
-        # print(b)
+        # result = pd.merge(left, right, how='outer', validate='m:m')
+        res = left.loc[left['B'] >= 3]
+        res = res.append(right,sort=False)
+        print(res)
 
 
 if __name__ == '__main__':

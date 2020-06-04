@@ -29,26 +29,28 @@ class Chihiro(scrapy.Spider):
             'Accept': '*/*',
             'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'zh-CN,zh;q=0.9',
+            # 'cookie': '',
             # 'Cache-Control': 'max-age=0',
-            'Connection': 'keep-alive',
-            # 'Cookie': cookie,
-            'Host': 'sh.5i5j.com',
+            # 'Connection': 'keep-alive',
+            # 'Host': 'sh.5i5j.com',
             # 'Referer': 'https://sh.5i5j.com/ershoufang/',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'same-origin',
-            'Sec-Fetch-User': '?1',
-            'Upgrade-Insecure-Requests': '1',
-            # 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
+            # 'Sec-Fetch-Mode': 'navigate',
+            # 'Sec-Fetch-Site': 'same-origin',
+            # 'Sec-Fetch-User': '?1',
+            # 'Upgrade-Insecure-Requests': '1',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
         },
         "DOWNLOAD_DELAY": 0.3,
-        "CONCURRENT_REQUESTS": 2,
+        "CONCURRENT_REQUESTS": 5,
         "RETRY_HTTP_CODES": [302, 403, 502],
         "RETRY_TIMES": 3,
         "DOWNLOADER_MIDDLEWARES": {
             # 'Chihiro.middleware_request.ChihiroDownloaderMiddleware': 543,
             'Chihiro.middleware_request.UserAgent_Middleware': 500,
-            'Chihiro.middleware_request.ChromeDownloaderMiddleware': None,
-            'Chihiro.middleware_request.IpAgent_Middleware': 333,
+            # 'Chihiro.middleware_request.ChromeDownloaderMiddleware': None,
+            'Chihiro.middleware_request.IpAgent_Middleware': 222,
+            'Chihiro.middleware_request.CookiesClear': 333,
+            # 'Chihiro.middleware_request.RequestsMiddleware': 222,
         },
         # 清洗参数
         "SPIDER_MIDDLEWARES": {
@@ -61,12 +63,17 @@ class Chihiro(scrapy.Spider):
         # 错误记录
         # ERROR_RECORD = True
         # 日志
-        "LOG_LEVEL": 'INFO',
-        "LOG_FILE": "Community.txt",
-        # "COOKIES_ENABLED": True
+        # "LOG_LEVEL": 'INFO',
+        # "LOG_FILE": "Community.txt",
+        # True：使用浏览器返回的cookie
+        # False：自己设置cookie
+        "COOKIES_ENABLED": True,
+        "COOKIES_DEBUG": True
+        # "REDIRECT_ENABLED": False
     }
 
     def parse(self, response):
+
         region_xpath_list = response.xpath(
             "//ul[contains(@class,'new_di_tab')]/a[position()>1]")
         for region_xpath in region_xpath_list:

@@ -8,6 +8,7 @@
 from scrapy import signals
 import logging
 
+
 class ChihiroDownloaderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
     # scrapy acts as if the downloader middleware does not modify the
@@ -54,7 +55,9 @@ class ChihiroDownloaderMiddleware(object):
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
 
+
 from fake_useragent import UserAgent
+
 
 class UserAgent_Middleware():
     def __init__(self):
@@ -68,6 +71,7 @@ class UserAgent_Middleware():
             'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727)',
             'Lynx/2.8.5rel.1 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/1.2.9',
         ]
+
     def process_request(self, request, spider):
         ua = UserAgent()
         try:
@@ -85,9 +89,20 @@ class IpAgent_Middleware():
         # ua = UserAgent()
         # request.headers['User-Agent'] = ua.random
         request.meta['proxy'] = "https://t18449818935473:jg4cg2j9@tps161.kdlapi.com:15818/"
+        # print(request.headers)
         # print(request.meta['proxy'])
         # request.headers["Proxy-Authorization"] = proxyAuth
 
+
+class CookiesClear():
+    def process_response(self, request, response, spider):
+        status = response.status
+        print(status)
+        if status == 403:
+            spider.crawler.engine.downloader.middleware.middlewares[11].jars[None].clear()
+            print("清除cookies")
+            return request
+        return response
 
 import requests
 import time

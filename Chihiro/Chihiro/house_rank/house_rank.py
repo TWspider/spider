@@ -556,13 +556,16 @@ class ClearDate(object):
             third_house.loc[:, 'toilet'] = pd.Series(data=toilet_list)
         return third_house
 
-    def handle_room_area_third(self, third_house):
+    def handle_room_area_third(self, third_house, flag_anjuke):
         BuildingSquare_list = third_house['BuildingSquare'].tolist()
         BuildingSquare = []
         for square in BuildingSquare_list:
             try:
                 res = re.split(" |平米|㎡", square)
-                BuildingSquare.append(str(int(float(res[0]))))
+                if flag_anjuke:
+                    BuildingSquare.append(str(int(float(res[0]))))
+                else:
+                    BuildingSquare.append(res[0])
             except:
                 BuildingSquare.append(None)
         # 把面积替换掉
@@ -577,7 +580,7 @@ class ClearDate(object):
 
 
 class RankHanle(object):
-    def __init__(self, host, user, password, database, chunksize):
+    def __init__(self, host, user, password, database, chunksize, flag_anjuke):
         self.engine_third_house = create_engine('mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
         self.engine_tw_house = create_engine('mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, 'TWEstate'))
         self.engine_res = create_engine(
@@ -585,12 +588,8 @@ class RankHanle(object):
                                                                                          database),
             fast_executemany=True)
         # 打标记、找交集、剩下的被定级
-
-        self.house_list_tw = pd.read_sql(
-            '''
-            select e.EstateId,e.EstateAddress as PropertyAddress,e.EstateAreaName as PropertyCommunity,r.TotalLayer as TotalFloor,r.LayerHighLowTypeName as Floor,r.RoomNum as room,r.HallNum as hall,r.ToiletNum as toilet,CONVERT(int,r.PropertySquare) as BuildingSquare,r.RoomId from Estate as e inner join room as r on e.EstateId=r.EstateId GROUP BY e.EstateId,e.EstateAddress,e.EstateAreaName,r.TotalLayer,r.LayerHighLowTypeName,r.RoomNum,r.HallNum,r.ToiletNum,r.PropertySquare,r.RoomId
-            ''',
-            self.engine_tw_house, chunksize=chunksize)
+        self.flag_anjuke = flag_anjuke
+        self.chunksize = chunksize
         self.address = ["road", 'alley']
         self.community_road = ["PropertyCommunity", 'road']
         self.community = ["PropertyCommunity"]
@@ -613,6 +612,21 @@ class RankHanle(object):
             "UpdateTime": DATETIME,
             "Status": NVARCHAR(100)
         }
+
+    def get_house_tw(self):
+        if self.flag_anjuke:
+            house_list_tw = pd.read_sql(
+                '''
+                select e.EstateId,e.EstateAddress as PropertyAddress,e.EstateAreaName as PropertyCommunity,r.TotalLayer as TotalFloor,r.LayerHighLowTypeName as Floor,r.RoomNum as room,r.HallNum as hall,r.ToiletNum as toilet,CONVERT(int,r.PropertySquare) as BuildingSquare,r.RoomId from Estate as e inner join room as r on e.EstateId=r.EstateId GROUP BY e.EstateId,e.EstateAddress,e.EstateAreaName,r.TotalLayer,r.LayerHighLowTypeName,r.RoomNum,r.HallNum,r.ToiletNum,r.PropertySquare,r.RoomId
+                ''',
+                self.engine_tw_house, chunksize=self.chunksize)
+        else:
+            house_list_tw = pd.read_sql(
+                '''
+                select e.EstateId,e.EstateAddress as PropertyAddress,e.EstateAreaName as PropertyCommunity,r.TotalLayer as TotalFloor,r.LayerHighLowTypeName as Floor,r.RoomNum as room,r.HallNum as hall,r.ToiletNum as toilet,r.PropertySquare as BuildingSquare,r.RoomId from Estate as e inner join room as r on e.EstateId=r.EstateId GROUP BY e.EstateId,e.EstateAddress,e.EstateAreaName,r.TotalLayer,r.LayerHighLowTypeName,r.RoomNum,r.HallNum,r.ToiletNum,r.PropertySquare,r.RoomId
+                ''',
+                self.engine_tw_house, chunksize=self.chunksize)
+        return house_list_tw
 
     def rank_handle_inner(self, res_match_is, res_match_is_sql, rank_tw, rank_third, rank, field_list, house_third,
                           house_tw):
@@ -655,8 +669,8 @@ class RankHanle(object):
         if not res_match_not.empty:
             res_match_not.loc[:, 'StarLevel'] = rank
             res_match_not.drop(labels=labels_drop, axis=1, inplace=True)
-            if rank <= 3:
-                res_match_not = res_match_not.drop_duplicates(subset=['ThirdId'])
+            # if rank <= 3:
+            res_match_not = res_match_not.drop_duplicates(subset=['ThirdId'])
             res_match_not = pd.merge(
                 left=res_match_not, right=house_third.loc[:, self.id_third_resource], sort=False,
                 how='left'
@@ -787,7 +801,6 @@ class RankHanle(object):
             res_match_is = res_match.get("res_match_is")
             res_match_is_sql = res_match.get("res_match_is_sql")
         else:
-
             return res_match_is_sql
 
         # 3星
@@ -809,6 +822,7 @@ class RankHanle(object):
             res_match_is_sql = res_match.get("res_match_is_sql")
             if not res_match_is.empty:
                 res_match_is.loc[:, 'StarLevel'] = 5
+                res_match_is = res_match_is.drop_duplicates(subset=['ThirdId'])
                 res_match_is = pd.merge(
                     left=res_match_is, right=house_third.loc[:, self.id_third_resource], sort=False,
                     how='left'
@@ -906,7 +920,7 @@ class RankHanle(object):
             # 删除指定字段
             res_match_is.drop(labels=["road", "alley"], axis=1, inplace=True)
             # 加入res_match_merge
-            res_match_merge = res_match_merge.append(res_match_is)
+            res_match_merge = res_match_merge.append(res_match_is,sort=False)
         return res_match_merge
 
 
@@ -921,34 +935,37 @@ class MatchRank:
         self.engine_third_house = create_engine('mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
         if self.flag_anjuke:
             self.house_rank = "ThirdHouseRankAnjuke"
-            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=5000)
+            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=100000,
+                                flag_anjuke=self.flag_anjuke)
             self.sql_update = "SELECT DISTINCT t.HouseStatus,t.roomid from ThirdHouseResource as t inner join ThirdHouseRankAnjuke as r on t.HouseStatus!=r.Status and t.RoomId=r.thirdid where t.Resource ='安居客'"
-            self.sql_str_day = "select RoomId as ThirdId,PropertyAddress,PropertyCommunity,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit,Resource,HouseStatus as Status from ThirdHouseResource WHERE (RoomId not in (select ThirdId from ThirdHouseRankAnjuke GROUP BY ThirdId)) and Resource ='安居客'"
+            self.sql_str_day = "select t.RoomId as ThirdId,t.PropertyCommunity,t.PropertyAddress,t.TotalFloor,t.Floor,t.HouseType,t.BuildingSquare,t.HouseDesc,t.PriceUnit,t.Resource,t.HouseStatus as Status from ThirdHouseResource as t LEFT JOIN ThirdHouseRank as r on t.RoomId=r.ThirdId where r.ThirdId is null and t.Resource ='安居客'"
         else:
             self.house_rank = 'ThirdHouseRank'
-            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=5000)
+            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=100000,
+                                flag_anjuke=self.flag_anjuke)
             self.sql_update = "SELECT DISTINCT t.HouseStatus,t.roomid from ThirdHouseResource as t inner join ThirdHouseRank as r on t.HouseStatus!=r.Status and t.RoomId=r.thirdid where t.Resource !='安居客'"
-            self.sql_str_day = "select RoomId as ThirdId,PropertyAddress,PropertyCommunity,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit,Resource,HouseStatus as Status from ThirdHouseResource WHERE (RoomId not in (select ThirdId from ThirdHouseRank GROUP BY ThirdId)) and Resource !='安居客'"
+            self.sql_str_day = "select t.RoomId as ThirdId,t.PropertyCommunity,t.PropertyAddress,t.TotalFloor,t.Floor,t.HouseType,t.BuildingSquare,t.HouseDesc,t.PriceUnit,t.Resource,t.HouseStatus as Status from ThirdHouseResource as t LEFT JOIN ThirdHouseRank as r on t.RoomId=r.ThirdId where r.ThirdId is null and t.Resource !='安居客'"
 
     def match_rank(self):
         # 新增匹配
         if self.flag_anjuke:
             house_third_list = pd.read_sql(
                 self.sql_str_day,
-                self.engine_third_house, chunksize=5000)
+                self.engine_third_house, chunksize=100000)
         else:
             house_third_list = pd.read_sql(
                 self.sql_str_day,
-                self.engine_third_house, chunksize=5000)
+                self.engine_third_house, chunksize=100000)
         res_match_is_sql = pd.DataFrame(
             columns=["ThirdId", "RoomId", 'EstateId', 'Resource', "StarLevel", "InsertTime", 'UpdateTime',
                      'Status'])
         res_match_is_sql.to_sql(self.house_rank, con=self.rh.engine_res, if_exists="append", index=False,
                                 dtype=self.rh.dtype)
         for house_third in house_third_list:
+            time_start_inner = time.time()
             if not house_third.empty:
-                # 处理第三方房源
-                # 处理地址和小区交叉情况
+                # # 处理第三方房源
+                # # 处理地址和小区交叉情况
                 handle_not_address_third = house_third[["ThirdId", 'PropertyAddress']]
                 handle_not_community_third = house_third[["ThirdId", 'PropertyCommunity']]
                 handle_community_to_address_third = self.cd.handle_community_to_address_third(house_third)
@@ -958,17 +975,18 @@ class MatchRank:
                 house_third = self.cd.handle_total_floor_third(house_third)
                 house_third = self.cd.handle_floor_third(house_third)
                 house_third = self.cd.handle_room_type_third(house_third)
-                house_third = self.cd.handle_room_area_third(house_third)
+                house_third = self.cd.handle_room_area_third(house_third, self.flag_anjuke)
                 house_third = house_third.drop(labels=["HouseType", 'HouseDesc', 'PriceUnit'], axis=1)
-                # 读取、清理库内房源
-                house_list_tw = self.rh.house_list_tw
-                # 获取每次匹配到的集合
+                # # 读取、清理库内房源
+                house_list_tw = self.rh.get_house_tw()
+                # # 获取每次匹配到的集合
                 id_third_match_is = set()
-                # 循环清洗、并设定星级
+                # # 循环清洗、并设定星级
                 for house_tw in house_list_tw:
                     res_match_is_sql = pd.DataFrame(
                         columns=["ThirdId", "RoomId", 'EstateId', 'Resource', "StarLevel", "InsertTime", 'UpdateTime',
-                     'Status'])
+                                 'Status'])
+                    # 处理地址和小区交叉情况
                     # 处理地址和小区交叉情况
                     handle_not_address_tw = house_tw[["RoomId", 'PropertyAddress']]
                     handle_not_community_tw = house_tw[["RoomId", 'PropertyCommunity']]
@@ -986,13 +1004,14 @@ class MatchRank:
                                                            handle_community_to_address_tw=handle_community_to_address_tw
                                                            )
                     res_match_is_sql = res_match_is_sql.drop_duplicates()
-                    input_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    res_match_is_sql.loc[:, 'InsertTime'] = input_time
-                    res_match_is_sql.to_sql(self.house_rank, con=self.rh.engine_res, if_exists="append",
-                                            index=False,
-                                            dtype=self.rh.dtype)
-                    id_third_match_is |= set(res_match_is_sql['ThirdId'].to_list())
-                    print("插入数据库")
+                    if not res_match_is_sql.empty:
+                        input_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        res_match_is_sql.loc[:, 'InsertTime'] = input_time
+                        res_match_is_sql.to_sql(self.house_rank, con=self.rh.engine_res, if_exists="append",
+                                                index=False,
+                                                dtype=self.rh.dtype)
+                        id_third_match_is |= set(res_match_is_sql['ThirdId'].to_list())
+                        print("插入匹配数据")
                 # 计算差值,获取为空的id插入数据库
                 id_third_all = set(house_third.loc[:, "ThirdId"])
                 id_third_match_not = list(id_third_all - id_third_match_is)
@@ -1008,14 +1027,18 @@ class MatchRank:
                     res_match_not_sql.to_sql(self.house_rank, con=self.rh.engine_res, if_exists="append",
                                              index=False,
                                              dtype=self.rh.dtype)
+                    print("插入未匹配数据")
             else:
                 print("无新增数据")
+            time_end_inner = time.time()
+            print('单次匹配时间', (time_end_inner - time_start_inner))
 
 
 # 库内10万、第三方20万，平均插入一次1分钟，共6小时
 if __name__ == '__main__':
     from apscheduler.schedulers.blocking import BlockingScheduler
     import traceback
+
     scheduler = BlockingScheduler()
 
 
@@ -1040,36 +1063,35 @@ if __name__ == '__main__':
         # password = '123456'
         # database = 'TWSpider'
         for flag_anjuke in flag_list:
+            time_start = time.time()
+            mr = MatchRank(flag_anjuke=flag_anjuke, host=host, user=user, password=password, database=database)
+            house_rank = mr.house_rank
+            sql_update = mr.sql_update
+            # 历史更新
             try:
-                time_start = time.time()
-                mr = MatchRank(flag_anjuke=flag_anjuke, host=host, user=user, password=password, database=database)
-                house_rank = mr.house_rank
-                sql_update = mr.sql_update
-                # 历史更新
+                print("更新状态：{}".format(house_rank))
                 with pymssql.connect(host=host, database=database,
                                      user=user, password=password, charset="utf8") as conn:
                     with conn.cursor() as cursor:
                         # 查出需要更新的字段
                         cursor.execute(sql_update)
                         res = cursor.fetchall()
-                        try:
-                            update_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            cursor.executemany(
-                                "UPDATE {} SET Status=%s, UpdateTime='{}' where ThirdId=%s".format(house_rank,
-                                                                                                     update_time),
-                                res
-                            )
-                            conn.commit()
-                        except Exception as e:
-                            print("异常：{}".format(e))
-                # 新增匹配
-                print(mr.sql_str_day)
-                mr.match_rank()
-                time_end = time.time()
-                print('totally cost', (time_end - time_start))
-            except Exception as e:
+                        update_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        cursor.executemany(
+                            "UPDATE {} SET Status=%s, UpdateTime='{}' where ThirdId=%s".format(house_rank,
+                                                                                               update_time),
+                            res
+                        )
+                        conn.commit()
+            except:
                 traceback.print_exc()
                 continue
+            # 新增匹配
+            print(mr.sql_str_day)
+            mr.match_rank()
+            time_end = time.time()
+            print('总匹配时间', (time_end - time_start))
+
 
     # scheduler.add_job(start, 'interval', days=1, start_date='2020-03-23 00:00:00', misfire_grace_time=10)
     # scheduler.start()

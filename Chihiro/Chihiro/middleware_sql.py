@@ -48,6 +48,7 @@ HouseStatus,HouseUrl,HouseDesc,BuildedTime,PubCompany,Agent
         self.HouseStatus = settings.get("HouseStatus")
         # 执行页面去重
         self.set_url_list = set()
+        self.scaned_url_list = []
         self.engine_third_house = create_engine(
             'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
         self.sql_select = pd.read_sql(
@@ -65,6 +66,9 @@ WatchHouse,LeaseTime,LeaseType,HasParkingPlace,HasHot,InsertTime,UpdateTime,
 HouseStatus,HouseUrl,HouseDesc,BuildedTime,PubCompany,Agent) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                   '''
         self.sql_update = "UPDATE ThirdHouseResource SET HouseStatus=%s, UpdateTime=%s where HouseUrl=%s"
+
+    def open_spider(self, spider):
+        spider.pipeline = self
 
     @classmethod
     def from_settings(cls, settings):
@@ -135,7 +139,7 @@ HouseStatus,HouseUrl,HouseDesc,BuildedTime,PubCompany,Agent) values(%s,%s,%s,%s,
                 # 判断是否状态变更
                 if flag in self.url_status_list:
                     # 状态不变
-                    spider.scaned_url_list.append(housing_url)
+                    self.scaned_url_list.append(housing_url)
                 else:
                     # 更新已售为可售、已租为可租
                     item.fields["UpdateTime"] = Field()
@@ -145,7 +149,7 @@ HouseStatus,HouseUrl,HouseDesc,BuildedTime,PubCompany,Agent) values(%s,%s,%s,%s,
                     print("重新上架:{}".format(item.get("HouseDesc")))
                     try:
                         self.do_update(cursor, item)
-                        spider.scaned_url_list.append(housing_url)
+                        self.scaned_url_list.append(housing_url)
                     except:
                         logging.info("异常房源：{}".format(item))
             else:

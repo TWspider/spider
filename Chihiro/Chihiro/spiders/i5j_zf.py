@@ -3,6 +3,7 @@ import scrapy
 import re
 import os
 import json
+import logging
 from copy import deepcopy
 from scrapy.loader import ItemLoader
 from ..items import ChihiroItem
@@ -202,7 +203,13 @@ class Chihiro(scrapy.Spider):
                 item.fields["LeaseType"] = Field()
                 item["LeaseType"] = rental_way
             if self.is_finished():
-                self.do_final()
+                pipeline = self.crawler.spider.pipeline
+                scaned_url_list = pipeline.scaned_url_list
+                url_list = pipeline.url_list
+                housing_trade_list = [x for x in url_list if x not in scaned_url_list]
+                logging.info(housing_trade_list)
+                for housing_url in housing_trade_list:
+                    yield scrapy.Request(url=housing_url, callback=self.house_status_handle)
             yield item
         next_page_handle = response.xpath("//a[@class='cPage'][1]/@href").extract_first()
         if next_page_handle:
@@ -212,24 +219,10 @@ class Chihiro(scrapy.Spider):
 
 
     def is_finished(self):
-        if self.crawler.engine.downloader.active:
-            return False
-        if self.crawler.engine.slot.start_requests is not None:
-            return False
-        if self.crawler.engine.slot.scheduler.has_pending_requests():
+        flag_queue = len(self.crawler.engine.slot.scheduler)
+        if flag_queue:
             return False
         return True
-
-    def do_final(self):
-        '''
-        更新可售为已售、可租为已租
-        :param cursor:
-        :param spider:
-        :return:
-        '''
-        housing_trade_list = [x for x in self.url_list if x not in self.scaned_url_list]
-        for housing_url in housing_trade_list:
-            yield scrapy.Request(url=housing_url, callback=self.house_status_handle)
 
     def house_status_handle(self, response):
         # 验证码

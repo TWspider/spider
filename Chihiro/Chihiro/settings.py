@@ -100,7 +100,7 @@ pass
 
 # SQL
 ITEM_PIPELINES = {
-   # 'Chihiro.middleware_sql.ChihiroPipeline': 300,
+   'Chihiro.middleware_sql.ChihiroPipeline': 300,
    #  'Chihiro.middleware_sql.CommunityPipeline': 300,
 }
 
