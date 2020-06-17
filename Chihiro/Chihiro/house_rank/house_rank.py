@@ -822,7 +822,7 @@ class RankHanle(object):
             res_match_is_sql = res_match.get("res_match_is_sql")
             if not res_match_is.empty:
                 res_match_is.loc[:, 'StarLevel'] = 5
-                res_match_is = res_match_is.drop_duplicates(subset=['ThirdId'])
+                # res_match_is = res_match_is.drop_duplicates(subset=['ThirdId'])
                 res_match_is = pd.merge(
                     left=res_match_is, right=house_third.loc[:, self.id_third_resource], sort=False,
                     how='left'
@@ -920,7 +920,7 @@ class RankHanle(object):
             # 删除指定字段
             res_match_is.drop(labels=["road", "alley"], axis=1, inplace=True)
             # 加入res_match_merge
-            res_match_merge = res_match_merge.append(res_match_is,sort=False)
+            res_match_merge = res_match_merge.append(res_match_is, sort=False)
         return res_match_merge
 
 
@@ -939,23 +939,25 @@ class MatchRank:
                                 flag_anjuke=self.flag_anjuke)
             self.sql_update = "SELECT DISTINCT t.HouseStatus,t.roomid from ThirdHouseResource as t inner join ThirdHouseRankAnjuke as r on t.HouseStatus!=r.Status and t.RoomId=r.thirdid where t.Resource ='安居客'"
             self.sql_str_day = "select t.RoomId as ThirdId,t.PropertyCommunity,t.PropertyAddress,t.TotalFloor,t.Floor,t.HouseType,t.BuildingSquare,t.HouseDesc,t.PriceUnit,t.Resource,t.HouseStatus as Status from ThirdHouseResource as t LEFT JOIN ThirdHouseRank as r on t.RoomId=r.ThirdId where r.ThirdId is null and t.Resource ='安居客'"
+            # self.sql_str_day = "select RoomId as ThirdId,PropertyCommunity,PropertyAddress,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit,Resource,HouseStatus as Status from ThirdHouseResource where Resource ='安居客'"
         else:
             self.house_rank = 'ThirdHouseRank'
-            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=100000,
+            self.rh = RankHanle(host=host, user=user, password=password, database=database, chunksize=50000,
                                 flag_anjuke=self.flag_anjuke)
             self.sql_update = "SELECT DISTINCT t.HouseStatus,t.roomid from ThirdHouseResource as t inner join ThirdHouseRank as r on t.HouseStatus!=r.Status and t.RoomId=r.thirdid where t.Resource !='安居客'"
-            self.sql_str_day = "select t.RoomId as ThirdId,t.PropertyCommunity,t.PropertyAddress,t.TotalFloor,t.Floor,t.HouseType,t.BuildingSquare,t.HouseDesc,t.PriceUnit,t.Resource,t.HouseStatus as Status from ThirdHouseResource as t LEFT JOIN ThirdHouseRank as r on t.RoomId=r.ThirdId where r.ThirdId is null and t.Resource !='安居客'"
+            self.sql_str_day = "select t.RoomId as ThirdId,t.PropertyCommunity,t.PropertyAddress,t.TotalFloor,t.Floor,t.HouseType,t.BuildingSquare,t.HouseDesc,t.PriceUnit,t.Resource,t.HouseStatus as Status from ThirdHouseResource as t LEFT JOIN ThirdHouseRank as r on t.RoomId=r.ThirdId where r.ThirdId is null and t.Resource !='安居客' and (t.HouseStatus='可售' or t.HouseStatus='可租')"
+            # self.sql_str_day = "select RoomId as ThirdId,PropertyCommunity,PropertyAddress,TotalFloor,Floor,HouseType,BuildingSquare,HouseDesc,PriceUnit,Resource,HouseStatus as Status from ThirdHouseResource where Resource !='安居客'"
 
     def match_rank(self):
         # 新增匹配
         if self.flag_anjuke:
             house_third_list = pd.read_sql(
                 self.sql_str_day,
-                self.engine_third_house, chunksize=100000)
+                self.engine_third_house, chunksize=20000)
         else:
             house_third_list = pd.read_sql(
                 self.sql_str_day,
-                self.engine_third_house, chunksize=100000)
+                self.engine_third_house, chunksize=50000)
         res_match_is_sql = pd.DataFrame(
             columns=["ThirdId", "RoomId", 'EstateId', 'Resource', "StarLevel", "InsertTime", 'UpdateTime',
                      'Status'])
@@ -986,7 +988,6 @@ class MatchRank:
                     res_match_is_sql = pd.DataFrame(
                         columns=["ThirdId", "RoomId", 'EstateId', 'Resource', "StarLevel", "InsertTime", 'UpdateTime',
                                  'Status'])
-                    # 处理地址和小区交叉情况
                     # 处理地址和小区交叉情况
                     handle_not_address_tw = house_tw[["RoomId", 'PropertyAddress']]
                     handle_not_community_tw = house_tw[["RoomId", 'PropertyCommunity']]
@@ -1044,7 +1045,7 @@ if __name__ == '__main__':
 
     # 判断总量还是增量flag_all
     def start():
-        flag_list = [False, True]
+        flag_list = [False]
         # 开发5.7
         # 10.55.5.7
         # tw_user

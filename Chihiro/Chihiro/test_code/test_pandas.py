@@ -78,14 +78,50 @@ class TestPanda:
         df1 = df1.reindex
         return res
 
-    def test(self):
-        left = pd.DataFrame({'B': [2, 2, 3, 4], 'C': [2, 2, 3, 4], })
-        right = pd.DataFrame({'B': [2, 2, 2, 2], 'D': [2, 2, 3, 4], })
+    def handle_split_line(self, ls_col):
+        new_col = []
+        new_index = []
+        for index, col in enumerate(ls_col):
+            if col != None:
+                col = str(col).split(",")
+                new_col += col
+                len_col = len(col) * [index]
+                new_index += len_col
+        return new_col,new_index
 
-        # result = pd.merge(left, right, how='outer', validate='m:m')
-        res = left.loc[left['B'] >= 3]
-        res = res.append(right,sort=False)
-        print(res)
+    def leave_word(self, house_third):
+        self.handle_split_line(house_third['alley'])
+        # print(pd.DataFrame({"alley": ["e1", "e2", "e2", "e3", ]})["alley"])
+        third_house = house_third.drop('alley', axis=1).join(
+            pd.DataFrame({"alley": ["e1", "e2", "e2", "e3", ]}, index=[0, 0, 1, 2])["alley"]
+        )
+        print(third_house)
+        # third_house = third_house.drop('road', axis=1).join(
+        #     third_house['road'].str.split(',', expand=True).stack().reset_index(level=1, drop=True).rename('road')
+        # )
+
+        # new_road = []
+        # new_alley = []
+        # for road in ls_road:
+        #     if road == None:
+        #         new_road.append(road)
+        #     else:
+        #         new_road += road
+        #
+        # house_third = house_third.drop('road', axis=1).join(new_road)
+        # ls_alley = house_third["alley"].str.split(',', expand=False)
+        # for alley in ls_alley:
+        #     if alley == None:
+        #         new_alley.append(alley)
+        #     else:
+        #         new_alley += alley
+
+    def test(self):
+        left = pd.DataFrame({'road': ['xx路,yy路,dd', "1", "2", None], 'alley': ["e1,e2", "e2", "e3", None]})
+        df1 = pd.DataFrame({'B': [1, 2, 3, 4], 'E': ["e1", "e2", "e3", "e4"]})
+        # print(df1['B'], type(df1['B']))
+        df2 = pd.DataFrame({'C': [1, 2, 3, 4], 'F': [("f" + str(i)) for i in range(1, 5)]})
+        self.leave_word(left)
 
 
 if __name__ == '__main__':
