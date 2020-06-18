@@ -172,5 +172,5 @@ if __name__ == "__main__":
     item()
 
 '''
-yum install -y chkconfig python bind-utils psmisc libxslt zlib sqlite cyrus-sasl-plain cyrus-sasl-qssapi fuse fuse-libs redhat-lsb
+yum install -y chkconfig python bind-Utils psmisc libxslt zlib sqlite cyrus-sasl-plain cyrus-sasl-qssapi fuse fuse-libs redhat-lsb
 '''

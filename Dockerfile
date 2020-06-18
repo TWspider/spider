@@ -13,7 +13,7 @@ apt-get install -y python3-pip && \
 pip3 install -r requirement.txt -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
 
 # 直接写入volume会报错no such
-#VOLUME . /test_code
+#VOLUME . /TestCode
 WORKDIR /test_code/Chihiro
 
 #WORKDIR /code

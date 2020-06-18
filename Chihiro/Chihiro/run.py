@@ -12,7 +12,6 @@ from scrapy.cmdline import execute
 if __name__ == '__main__':
     scheduler = TwistedScheduler()
 
-
     def scheduler_house():
         spider_list_1 = [
             "lianjia_esf",
