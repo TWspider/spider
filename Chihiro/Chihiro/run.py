@@ -15,10 +15,10 @@ if __name__ == '__main__':
 
     def scheduler_house():
         spider_list_1 = [
-            # "lianjia_esf",
-            # "lianjia_zf",
-            # "zhongyuan_esf",
-            # "zhongyuan_zf",
+            "lianjia_esf",
+            "lianjia_zf",
+            "zhongyuan_esf",
+            "zhongyuan_zf",
             "i5j_esf",
             "i5j_zf",
             "dafangya",
@@ -50,8 +50,8 @@ if __name__ == '__main__':
 
     def scheduler_community():
         spider_list_3 = [
-            # "community_lianjia",
-            # "community_zhongyuan",
+            "community_lianjia",
+            "community_zhongyuan",
             "community_i5j"
         ]
         for spider3 in spider_list_3:
@@ -83,9 +83,9 @@ if __name__ == '__main__':
                 print(e)
                 print("异常爬虫:{}".format(spider))
     try:
-        # scheduler_start()
+        scheduler_start()
         # scheduler_community()
-        scheduler_house()
+        # scheduler_house()
         # scheduler_house_anjuke()
         # test_spider()
     except (KeyboardInterrupt, SystemExit):
