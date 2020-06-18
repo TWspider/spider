@@ -97,9 +97,9 @@ class IpAgent_Middleware():
 class CookiesClear():
     def process_response(self, request, response, spider):
         status = response.status
-        print(status)
         if status == 403:
             spider.crawler.engine.downloader.middleware.middlewares[11].jars[None].clear()
+            time.sleep(1)
             print("清除cookies")
             return request
         return response

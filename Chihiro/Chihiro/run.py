@@ -15,10 +15,10 @@ if __name__ == '__main__':
 
     def scheduler_house():
         spider_list_1 = [
-            "lianjia_esf",
-            "lianjia_zf",
-            "zhongyuan_esf",
-            "zhongyuan_zf",
+            # "lianjia_esf",
+            # "lianjia_zf",
+            # "zhongyuan_esf",
+            # "zhongyuan_zf",
             "i5j_esf",
             "i5j_zf",
             "dafangya",
@@ -90,3 +90,4 @@ if __name__ == '__main__':
         # test_spider()
     except (KeyboardInterrupt, SystemExit):
         pass
+        print("test")

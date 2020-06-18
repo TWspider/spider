@@ -53,8 +53,8 @@ class Chihiro(scrapy.Spider):
         "RETRY_TIMES": 3,
         "DOWNLOADER_MIDDLEWARES": {
             # 'Chihiro.middleware_request.PuppeteerMiddleware': 543,
-            # 'Chihiro.middleware_request.UserAgent_Middleware': 543,
-            'Chihiro.middleware_request.ChromeDownloaderMiddleware': 543,
+            'Chihiro.middleware_request.IpAgent_Middleware': 222,
+            'Chihiro.middleware_request.CookiesClear': 333,
         },
         # 清洗参数
         "SPIDER_MIDDLEWARES": {

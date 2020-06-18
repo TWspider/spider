@@ -51,7 +51,7 @@ def leave_word(house_third):
     third_house = house_third.drop('alley', axis=1).join(
         pd.DataFrame({"alley": new_col}, index=new_index)["alley"]
     )
-    new_col, new_index = handle_split_line(house_third["road"])
+    new_col, new_index = handle_split_line(third_house["road"])
 
     third_house = third_house.drop('road', axis=1).join(
         pd.DataFrame({"road": new_col}, index=new_index)["road"]
