@@ -63,8 +63,8 @@ class Chihiro(scrapy.Spider):
         # 错误记录
         # ERROR_RECORD = True
         # 日志
-        # "LOG_LEVEL": 'INFO',
-        # "LOG_FILE": "Community.txt",
+        "LOG_LEVEL": 'INFO',
+        "LOG_FILE": "Community.txt",
         # True：使用浏览器返回的cookie
         # False：自己设置cookie
         "COOKIES_ENABLED": True,
