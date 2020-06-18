@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import scrapy
 import re
+import logging
 import json
 from copy import deepcopy
 from scrapy.loader import ItemLoader
@@ -12,7 +13,8 @@ import datetime
 import time
 from lxml import etree
 import jsonpath
-
+import pandas as pd
+from sqlalchemy import create_engine
 
 class Chihiro(scrapy.Spider):
     name = 'dafangya'
@@ -49,7 +51,7 @@ class Chihiro(scrapy.Spider):
         "RETRY_TIMES": 3,
         "DOWNLOADER_MIDDLEWARES": {
             # 'Chihiro.middleware_request.ChihiroDownloaderMiddleware': 543,
-            'Chihiro.middleware_request.UserAgent_Middleware': 543,
+            # 'Chihiro.middleware_request.UserAgent_Middleware': 543,
         },
         # 清洗参数
         "SPIDER_MIDDLEWARES": {
@@ -66,6 +68,25 @@ class Chihiro(scrapy.Spider):
         # "LOG_FILE": "Chihiro.txt"
     }
 
+    def __init__(self):
+        host = '10.10.202.13'
+        user = 'bigdata_user'
+        password = 'ulyhx3rxqhtw'
+
+        # host = '10.55.5.7'
+        # user = 'tw_user'
+        # password = '123456'
+
+        database = 'TWSpider'
+        self.scaned_url_list = []
+        self.engine_third_house = create_engine(
+            'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
+        self.sql_select = pd.read_sql(
+            "select HouseUrl,HouseStatus from ThirdHouseResource where Resource='%s' and RentalStatus = %s" % (
+                self.Resource, self.RentalStatus),
+            self.engine_third_house)
+        self.url_list = self.sql_select["HouseUrl"].tolist()
+
     def get_home_data(self, obj):
         city_list = jsonpath.jsonpath(obj, '$..provinceName')
         area_list = jsonpath.jsonpath(obj, '$..districtName')
@@ -74,7 +95,7 @@ class Chihiro(scrapy.Spider):
         build_time_list = jsonpath.jsonpath(obj, '$..buildYear')
         release_time_list = jsonpath.jsonpath(obj, '$..publishDate')  # TODO 时间戳 准换为时间
         addr_list = jsonpath.jsonpath(obj, '$..address')
-        floor_list = jsonpath.jsonpath(obj, '$..floor')
+        # floor_list = jsonpath.jsonpath(obj, '$..floor')
         total_price_list = jsonpath.jsonpath(obj, '$..price')
         community_list = jsonpath.jsonpath(obj, '$..neighborhoodName')
         build_size_list = jsonpath.jsonpath(obj, '$..area')
@@ -83,7 +104,7 @@ class Chihiro(scrapy.Spider):
         data = {'city': city_list, 'area': area_list,
                 'road': road_list, 'house_url': house_url_list, 'build_time': build_time_list,
                 'release_time': release_time_list, 'addr': addr_list,
-                'floor': floor_list, 'total_price': total_price_list,
+                'total_price': total_price_list,
                 'build_size': build_size_list, 'community': community_list,
                 'elevator': elevator_list, 'resource_status': offlineDate_list,
                 }
@@ -99,24 +120,44 @@ class Chihiro(scrapy.Spider):
             per_price = tree.xpath('//span[@class="font-normal font-white font-size14 margin-left10"]/text()')[
                 0].strip().split(
                 '￥')[-1]
-            total_floor_handle = tree.xpath('//span[@id="house_floor_total_span"]/text()')[0].strip()
-            total_floor = re.search(" / (.*?)（", total_floor_handle).group(1)
+            floor_handle = tree.xpath('//span[@id="house_floor_total_span"]/text()')[0].strip()
+            total_floor_handle = re.search(" / (.*?)（", floor_handle)
+            if total_floor_handle:
+                total_floor = total_floor_handle.group(1)
+            else:
+                total_floor = re.search(" 共(.*?)层", floor_handle)
+                if total_floor:
+                    total_floor = total_floor.group(1)
+                else:
+                    total_floor = None
+            floor = re.search("(.*)\s+/", floor_handle)
+            if floor:
+                floor = floor.group(1).strip()
+            else:
+                floor = re.search("(.*)\s+\(", floor_handle)
+                if floor:
+                    floor = floor.group(1)
+                else:
+                    floor = None
             # print('===================', total_floor)
             item.fields["HouseType"] = Field()
             item.fields["TotalFloor"] = Field()
+            item.fields["Floor"] = Field()
             item.fields["HouseUse"] = Field()
             item.fields["HouseDirection"] = Field()
             item.fields["FixTypeName"] = Field()
             item.fields["PriceUnit"] = Field()
             item['HouseType'] = door_model
-            item['TotalFloor'] = total_floor or 0
+            item['TotalFloor'] = total_floor or None
+            item['Floor'] = floor
             item['HouseUse'] = house_use
             item['HouseDirection'] = direction
             item['FixTypeName'] = decoration
             item['PriceUnit'] = per_price
             return item
         except Exception as e:
-            print('下架，已售')
+            print("item异常：{}".format(e))
+            logging.info("item异常：{}".format(e))
 
     def parse(self, response):
         base_url = 'https://www.dafangya.com/api/v2/search/list?level=12&ot=0&pnr=-1%7C-1&bnr=-1%7C-1&tnr=-1%7C-1&fr=-1%7C-1&bar=-1%7C-1&pdr=-1&pr=-1%7C-1&ar=-1%7C-1&dt=-1&hf=&hut=&ll=&sort=houseFrom%2Casc&sort=publishDate%2Cdesc&sort=auto&size=1000&page={}&q=1&ele=&latL=31.043706&lonL=121.376391&latR=31.408334&lonR=121.564963'
@@ -139,7 +180,7 @@ class Chihiro(scrapy.Spider):
             item.fields["BuildedTime"] = Field()
             item.fields["TimeToRelease"] = Field()
             item.fields["PropertyAddress"] = Field()
-            item.fields["Floor"] = Field()
+            # item.fields["Floor"] = Field()
             item.fields["TotalPrice"] = Field()
             item.fields["BuildingSquare"] = Field()
             item.fields["PropertyCommunity"] = Field()
@@ -156,7 +197,7 @@ class Chihiro(scrapy.Spider):
                     item['TimeToRelease'] = time.strftime("%Y-%m-%d",
                                                           time.localtime(int(str(data['release_time'][index])[:-3])))
                     item['PropertyAddress'] = data['addr'][index]
-                    item['Floor'] = data['floor'][index]
+                    # item['Floor'] = data['floor'][index]
                     item['TotalPrice'] = data['total_price'][index]
                     item['BuildingSquare'] = data['build_size'][index]
                     item['PropertyCommunity'] = data['community'][index]
@@ -176,26 +217,30 @@ class Chihiro(scrapy.Spider):
             # 获取次页数据
             item = self.get_plate_data(tree, item)
             if item != None:
+                if self.is_finished():
+                    pipeline = self.crawler.spider.pipeline
+                    scaned_url_list = pipeline.scaned_url_list
+                    url_list = pipeline.url_list
+                    housing_trade_list = [x for x in url_list if x not in scaned_url_list]
+                    logging.info(housing_trade_list)
+                    for housing_url in housing_trade_list:
+                        yield scrapy.Request(url=housing_url, callback=self.house_status_handle)
                 yield item
 
-        # AreaName          区域    pass
-        # PlateName         板块    pass
+    def is_finished(self):
+        flag_queue = len(self.crawler.engine.slot.scheduler)
+        if flag_queue:
+            return False
+        return True
 
-        # PropertyCommunity 小区    pass
-        # PropertyAddress   地址    pass
-
-        # TotalFloor        总楼层    pass
-        # Floor             所在楼层    pass
-
-        # HouseUrl          链接    pass
-        # HouseDesc         描述    pass
-
-        # HouseType         户型    pass
-        # BuildingSquare    面积    pass
-        # TotalPrice        总价    pass
-        # PriceUnit         单价    pass
-
-        # HouseDirection    朝向    pass
-        # FixTypeName       装修    pass
-        # PubCompany        发布公司    pass
-        # Agent             经纪人    pass
+    def house_status_handle(self, response):
+        # 验证码
+        url = response.url
+        item = {}
+        flag = response.xpath("//span[@class='neighborhoodName']/text()").extract_first()
+        if flag:
+            pass
+        else:
+            item["flag_remaining"] = True
+            item["HouseUrl"] = url
+            yield item

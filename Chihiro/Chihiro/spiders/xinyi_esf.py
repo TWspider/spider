@@ -3,13 +3,16 @@ import datetime
 import math
 from scrapy import Item, Field
 import pymssql
+import logging
 import scrapy
 import re
 import json
 from copy import deepcopy
 from scrapy.loader import ItemLoader
 from ..items import ChihiroItem
-
+import pandas as pd
+from sqlalchemy import create_engine
+import datetime
 
 class Chihiro(scrapy.Spider):
     name = 'xinyi_esf'
@@ -50,6 +53,25 @@ class Chihiro(scrapy.Spider):
         # "LOG_LEVEL": 'INFO',
         # "LOG_FILE": "Chihiro.txt"
     }
+
+    def __init__(self):
+        host = '10.10.202.13'
+        user = 'bigdata_user'
+        password = 'ulyhx3rxqhtw'
+
+        # host = '10.55.5.7'
+        # user = 'tw_user'
+        # password = '123456'
+
+        database = 'TWSpider'
+        self.scaned_url_list = []
+        self.engine_third_house = create_engine(
+            'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
+        self.sql_select = pd.read_sql(
+            "select HouseUrl,HouseStatus from ThirdHouseResource where Resource='%s' and RentalStatus = %s" % (
+                self.Resource, self.RentalStatus),
+            self.engine_third_house)
+        self.url_list = self.sql_select["HouseUrl"].tolist()
 
     def parse(self, response):
         total_page = math.ceil(int(response.xpath('//*[@id="listCover"]/div/div[1]/span/text()').extract_first()) / 10)
@@ -114,4 +136,32 @@ class Chihiro(scrapy.Spider):
                 '/html/body/section[2]/section[1]/div[2]/div[2]/div[1]/div[2]/ul/liv/span[2]/text()').extract_first().strip()
         except:
             item['HouseDirection'] = 0
+        if self.is_finished():
+            pipeline = self.crawler.spider.pipeline
+            scaned_url_list = pipeline.scaned_url_list
+            url_list = pipeline.url_list
+            housing_trade_list = [x for x in url_list if x not in scaned_url_list]
+            logging.info(housing_trade_list)
+            for housing_url in housing_trade_list:
+                yield scrapy.Request(url=housing_url, callback=self.house_status_handle)
         yield item
+
+
+    def is_finished(self):
+        flag_queue = len(self.crawler.engine.slot.scheduler)
+        if flag_queue:
+            return False
+        return True
+
+
+    def house_status_handle(self, response):
+        # 验证码
+        url = response.url
+        item = {}
+        flag = response.xpath("//p[@class='h40']/span/text()").extract_first()
+        if flag:
+            pass
+        else:
+            item["flag_remaining"] = True
+            item["HouseUrl"] = url
+            yield item

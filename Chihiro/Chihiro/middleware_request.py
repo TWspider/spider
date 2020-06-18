@@ -6,6 +6,7 @@
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
+import logging
 
 
 class ChihiroDownloaderMiddleware(object):
@@ -55,23 +56,85 @@ class ChihiroDownloaderMiddleware(object):
         spider.logger.info('Spider opened: %s' % spider.name)
 
 
+from fake_useragent import UserAgent
+
+
 class UserAgent_Middleware():
+    def __init__(self):
+        self.headers = [
+            "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:30.0) Gecko/20100101 Firefox/30.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/537.75.14",
+            "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Win64; x64; Trident/6.0)",
+            'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11) Gecko/20071127 Firefox/2.0.0.11',
+            'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727)',
+            'Lynx/2.8.5rel.1 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/1.2.9',
+        ]
+
     def process_request(self, request, spider):
         ua = UserAgent()
-        request.headers['User-Agent'] = ua.random
+        try:
+            useragent = ua.random
+        except:
+            useragent = random.choice(self.headers)
+        request.headers['User-Agent'] = useragent
+
 
 import base64
+
+
 class IpAgent_Middleware():
     def process_request(self, request, spider):
         # ua = UserAgent()
         # request.headers['User-Agent'] = ua.random
         request.meta['proxy'] = "https://t18449818935473:jg4cg2j9@tps161.kdlapi.com:15818/"
+        # print(request.headers)
+        # print(request.meta['proxy'])
         # request.headers["Proxy-Authorization"] = proxyAuth
+
+
+class CookiesClear():
+    def process_response(self, request, response, spider):
+        status = response.status
+        if status == 403:
+            spider.crawler.engine.downloader.middleware.middlewares[11].jars[None].clear()
+            time.sleep(1)
+            print("清除cookies")
+            return request
+        return response
 
 import requests
 import time
 import random
-from scrapy.http import HtmlResponse
+
+
+class RequestsMiddleware():
+    def __init__(self):
+        self.headers = [
+            "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:30.0) Gecko/20100101 Firefox/30.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/537.75.14",
+            "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Win64; x64; Trident/6.0)",
+            'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11) Gecko/20071127 Firefox/2.0.0.11',
+            'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727)',
+            'Lynx/2.8.5rel.1 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/1.2.9',
+        ]
+
+    def process_request(self, request, spider):
+        headers = spider.custom_settings.get("DEFAULT_REQUEST_HEADERS")
+        headers['User-Agent'] = random.choice(self.headers)
+        try:
+            response = requests.get(url=request.url, headers=headers)
+            body = response.content
+            return HtmlResponse(url=request.url, body=body, request=request, encoding='utf-8',
+                                status=200)
+        except Exception as e:
+            print(e)
+            logging.info("middleware_request:{}".format(e))
+            return HtmlResponse(url=request.url, body='', request=request, encoding='utf-8',
+                                status=444)
 
 
 class NewsUserAgentMiddleware():
@@ -123,7 +186,6 @@ class NewsUserAgentMiddleware():
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 import os
-from fake_useragent import UserAgent
 import platform
 
 

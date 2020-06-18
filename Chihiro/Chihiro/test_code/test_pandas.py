@@ -78,31 +78,50 @@ class TestPanda:
         df1 = df1.reindex
         return res
 
+    def handle_split_line(self, ls_col):
+        new_col = []
+        new_index = []
+        for index, col in enumerate(ls_col):
+            if col != None:
+                col = str(col).split(",")
+                new_col += col
+                len_col = len(col) * [index]
+                new_index += len_col
+        return new_col,new_index
+
+    def leave_word(self, house_third):
+        self.handle_split_line(house_third['alley'])
+        # print(pd.DataFrame({"alley": ["e1", "e2", "e2", "e3", ]})["alley"])
+        third_house = house_third.drop('alley', axis=1).join(
+            pd.DataFrame({"alley": ["e1", "e2", "e2", "e3", ]}, index=[0, 0, 1, 2])["alley"]
+        )
+        print(third_house)
+        # third_house = third_house.drop('road', axis=1).join(
+        #     third_house['road'].str.split(',', expand=True).stack().reset_index(level=1, drop=True).rename('road')
+        # )
+
+        # new_road = []
+        # new_alley = []
+        # for road in ls_road:
+        #     if road == None:
+        #         new_road.append(road)
+        #     else:
+        #         new_road += road
+        #
+        # house_third = house_third.drop('road', axis=1).join(new_road)
+        # ls_alley = house_third["alley"].str.split(',', expand=False)
+        # for alley in ls_alley:
+        #     if alley == None:
+        #         new_alley.append(alley)
+        #     else:
+        #         new_alley += alley
+
     def test(self):
-        # import pyodbc
-        # print(pyodbc.drivers())
-        # df1 = pd.DataFrame({"third": [213, 213], "tw": [213, 213]})
-        # k = ['one', 'two']
-        # res = df1.groupby(k).mean()
-        # print(res)
-        # sql_select.to_sql('test', con=engine, if_exists="append", index=False)
-        a = {"a": ["dsa", None, 333, 444], "b": [1, 2, 3, 3]}
-        a = pd.DataFrame(a)
-
-        # print(df)
-        b = a.dropna(subset=['a'])
-        print(b)
-
-        c = pd.merge(a, b, how='left')
-        print(c)
-
-        c["b"] = [1, 2, 3, 5]
-        a = 'dsds'
-        res = re.search("(.*?)/", a).group(1)
-        # c = df.isnull()
-        # print(b.index)
-
-        # print(b)
+        left = pd.DataFrame({'road': ['xx路,yy路,dd', "1", "2", None], 'alley': ["e1,e2", "e2", "e3", None]})
+        df1 = pd.DataFrame({'B': [1, 2, 3, 4], 'E': ["e1", "e2", "e3", "e4"]})
+        # print(df1['B'], type(df1['B']))
+        df2 = pd.DataFrame({'C': [1, 2, 3, 4], 'F': [("f" + str(i)) for i in range(1, 5)]})
+        self.leave_word(left)
 
 
 if __name__ == '__main__':

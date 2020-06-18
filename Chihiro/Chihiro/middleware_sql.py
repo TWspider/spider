@@ -9,8 +9,9 @@ from twisted.enterprise import adbapi
 import pandas as pd
 from sqlalchemy import create_engine
 import datetime
+import scrapy
+import logging
 from scrapy import Field
-
 
 # 开发5.7
 # 10.55.5.7
@@ -27,6 +28,7 @@ password = 'ulyhx3rxqhtw'
 
 database = 'TWSpider'
 
+
 class ChihiroPipeline(object):
     def __init__(self, dbpool, settings):
         '''
@@ -40,14 +42,13 @@ HouseStatus,HouseUrl,HouseDesc,BuildedTime,PubCompany,Agent
         :param settings:
         '''
         self._dbpool = dbpool
-        self.scaned_url_list = []
         self.PropertyCity = settings.get("PropertyCity")
         self.Resource = settings.get("Resource")
         self.RentalStatus = settings.get("RentalStatus")
         self.HouseStatus = settings.get("HouseStatus")
         # 执行页面去重
         self.set_url_list = set()
-
+        self.scaned_url_list = []
         self.engine_third_house = create_engine(
             'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
         self.sql_select = pd.read_sql(
@@ -64,7 +65,10 @@ RentalStatus,FixTypeName,TimeToLive,TimeToRelease,HasGas,WaterType,ElectriciType
 WatchHouse,LeaseTime,LeaseType,HasParkingPlace,HasHot,InsertTime,UpdateTime,
 HouseStatus,HouseUrl,HouseDesc,BuildedTime,PubCompany,Agent) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                   '''
-        self.sql_update = "UPDATE ThirdHouseResource SET HouseStatus=%s, UpdateTime=%s where HouseUrl = %s"
+        self.sql_update = "UPDATE ThirdHouseResource SET HouseStatus=%s, UpdateTime=%s where HouseUrl=%s"
+
+    def open_spider(self, spider):
+        spider.pipeline = self
 
     @classmethod
     def from_settings(cls, settings):
@@ -123,57 +127,161 @@ HouseStatus,HouseUrl,HouseDesc,BuildedTime,PubCompany,Agent) values(%s,%s,%s,%s,
         )
 
     def do_select(self, cursor, item, spider):
+        flag_remaining = item.get("flag_remaining")
         housing_url = item.get('HouseUrl')
-        flag = [housing_url, self.HouseStatus]
         t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # 判断是否新增
-        if housing_url in self.url_list:
-            # 判断是否状态变更
-            if flag in self.url_status_list:
-                # 状态不变
-                self.scaned_url_list.append(housing_url)
-            else:
-                # 更新已售为可售、已租为可租
-                item.fields["UpdateTime"] = Field()
-                item["UpdateTime"] = t
-                item.fields["HouseStatus"] = Field()
-                item["HouseStatus"] = self.HouseStatus
-                print("历史房源:{}".format(item.get("HouseDesc")))
-                self.do_update(cursor, item)
-                self.scaned_url_list.append(housing_url)
+        if flag_remaining:
+            self.do_update_shelves(cursor, housing_url=housing_url, t=t)
         else:
-            # 插入新的可售
-            item.fields["InsertTime"] = Field()
-            item.fields["PropertyCity"] = Field()
-            item.fields["Resource"] = Field()
-            item.fields["RentalStatus"] = Field()
-            item.fields["HouseStatus"] = Field()
-            item["InsertTime"] = t
-            item["PropertyCity"] = self.PropertyCity
-            item["Resource"] = self.Resource
-            item["RentalStatus"] = self.RentalStatus
-            item["HouseStatus"] = self.HouseStatus
-            if housing_url not in self.set_url_list:
-                print("新增房源:{}".format(item.get("HouseDesc")))
-                self.do_insert(cursor, item)
-                self.set_url_list.add(housing_url)
-
-    def do_final(self, cursor, spider):
-        housing_trade_list = [x for x in self.url_list if x not in self.scaned_url_list]
-        for housing_url in housing_trade_list:
-            update_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            if self.RentalStatus:
-                house_status = "已租"
+            flag = [housing_url, self.HouseStatus]
+            # 判断是否新增
+            if housing_url in self.url_list:
+                # 判断是否状态变更
+                if flag in self.url_status_list:
+                    # 状态不变
+                    self.scaned_url_list.append(housing_url)
+                else:
+                    # 更新已售为可售、已租为可租
+                    item.fields["UpdateTime"] = Field()
+                    item["UpdateTime"] = t
+                    item.fields["HouseStatus"] = Field()
+                    item["HouseStatus"] = self.HouseStatus
+                    print("重新上架:{}".format(item.get("HouseDesc")))
+                    try:
+                        self.do_update(cursor, item)
+                        self.scaned_url_list.append(housing_url)
+                    except:
+                        logging.info("异常房源：{}".format(item))
             else:
-                house_status = "已售"
-            print("已下架的:{}{}".format(housing_url, house_status))
-            cursor.execute(
-                self.sql_update,
-                (
-                    house_status, update_time, housing_url
-                )
+                # 插入新的可售
+                item.fields["InsertTime"] = Field()
+                item.fields["PropertyCity"] = Field()
+                item.fields["Resource"] = Field()
+                item.fields["RentalStatus"] = Field()
+                item.fields["HouseStatus"] = Field()
+                item["InsertTime"] = t
+                item["PropertyCity"] = self.PropertyCity
+                item["Resource"] = self.Resource
+                item["RentalStatus"] = self.RentalStatus
+                item["HouseStatus"] = self.HouseStatus
+                if housing_url not in self.set_url_list:
+                    print("新增房源:{}".format(item.get("HouseDesc")))
+                    try:
+                        self.do_insert(cursor, item)
+                        self.set_url_list.add(housing_url)
+                    except:
+                        logging.info("异常房源：{}".format(item))
+
+    def do_update_shelves(self, cursor, housing_url, t):
+        '''
+        更新可售为已售、可租为已租
+        :param cursor:
+        :param spider:
+        :return:
+        '''
+        if self.RentalStatus:
+            house_status = "已租"
+        else:
+            house_status = "已售"
+        print("已下架的:{}{}".format(housing_url, house_status))
+        cursor.execute(
+            self.sql_update,
+            (
+                house_status, t, housing_url
             )
+        )
 
     def close_spider(self, cursor):
-        self._dbpool.runInteraction(self.do_final, cursor)
+        # self._dbpool.runInteraction(self.do_final, cursor)
+        self._dbpool.close()
+
+
+class CommunityPipeline(object):
+    def __init__(self, dbpool, settings):
+        '''
+        :param dbpool:
+        :param settings:
+        '''
+        self._dbpool = dbpool
+        self.PropertyCity = settings.get("PropertyCity")
+        self.Resource = settings.get("Resource")
+        self.engine_third_house = create_engine(
+            'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
+        self.sql_select = '''
+            select count(*) from ThirdCommunityResource WHERE CommunityUrl=%s
+        '''
+        self.sql_insert = '''
+                  Insert into ThirdCommunityResource(InsertTime,CommunityUrl,PropertyCommunity,PropertyAddress,PriceUnit,BuildedTime,BuildingType,PropertyFee
+                  ,PropertyCompany,Developers,TotalBuilding,TotalHouseholds,NearbyStores,PropertyCity,Resource,AreaName,PlateName,AroundSchool,VolumeRatio,GreeningRatio,AroundTraffic
+) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                  '''
+
+    @classmethod
+    def from_settings(cls, settings):
+        '''
+        # 开发5.7
+        # 10.55.5.7
+        # tw_user
+        # 123456
+        # 爬虫13
+        # 10.10.202.13
+        # bigdata_user
+        # ulyhx3rxqhtw
+        :param settings:
+        :return:
+        '''
+
+        dbpool = adbapi.ConnectionPool("pymssql", host=host, database=database,
+                                       user=user, password=password, charset="utf8",
+                                       )
+        return cls(dbpool, settings)
+
+    def process_item(self, item, spider):
+        self._dbpool.runInteraction(self.do_select, item, spider)
+        return item
+
+    def do_insert(self, cursor, item):
+        '''
+        :param cursor:
+        :param item:
+        :return:
+
+        '''
+        cursor.execute(
+            self.sql_insert,
+            (
+                item.get("InsertTime"), item.get("CommunityUrl"),
+                item.get("PropertyCommunity"), item.get("PropertyAddress"), item.get("PriceUnit"),
+                item.get("BuildedTime"), item.get("BuildingType"), item.get("PropertyFee"), item.get("PropertyCompany"),
+                item.get("Developers"), item.get("TotalBuilding"),
+                item.get("TotalHouseholds"), item.get("NearbyStores"), item.get("PropertyCity"),
+                item.get("Resource"), item.get("AreaName"), item.get("PlateName"), item.get("AroundSchool"),
+                item.get("VolumeRatio"), item.get("GreeningRatio"), item.get("AroundTraffic"),
+            )
+        )
+
+    def do_select(self, cursor, item, spider):
+        '''
+        if 存在
+        :param cursor:
+        :param item:
+        :param spider:
+        :return:
+        '''
+        t = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        item.fields["InsertTime"] = Field()
+        item.fields["PropertyCity"] = Field()
+        item.fields["Resource"] = Field()
+        item["InsertTime"] = t
+        item["PropertyCity"] = self.PropertyCity
+        item["Resource"] = self.Resource
+        cursor.execute(self.sql_select, (item.get("CommunityUrl")))
+        flag = cursor.fetchone()[0]
+        if flag == 0:
+            print("新增小区：{}".format(item.get("PropertyCommunity")))
+            self.do_insert(cursor, item)
+        else:
+            print("历史小区：{}".format(item.get("PropertyCommunity")))
+
+    def close_spider(self, cursor):
         self._dbpool.close()

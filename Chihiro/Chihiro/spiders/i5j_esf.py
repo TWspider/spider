@@ -3,6 +3,7 @@ import scrapy
 import re
 import os
 import json
+import logging
 from copy import deepcopy
 from scrapy.loader import ItemLoader
 from ..items import ChihiroItem
@@ -11,6 +12,10 @@ from scrapy.utils.project import get_project_settings
 from scrapy import Item, Field
 from selenium import webdriver
 import sys
+
+import pandas as pd
+from sqlalchemy import create_engine
+import datetime
 
 
 class Chihiro(scrapy.Spider):
@@ -49,7 +54,8 @@ class Chihiro(scrapy.Spider):
         "RETRY_TIMES": 3,
         "DOWNLOADER_MIDDLEWARES": {
             # 'Chihiro.middleware_request.ChihiroDownloaderMiddleware': 543,
-            'Chihiro.middleware_request.ChromeDownloaderMiddleware': 543,
+            'Chihiro.middleware_request.IpAgent_Middleware': 222,
+            'Chihiro.middleware_request.CookiesClear': 333,
         },
         # 清洗参数
         "SPIDER_MIDDLEWARES": {
@@ -66,6 +72,25 @@ class Chihiro(scrapy.Spider):
         # "LOG_LEVEL": 'INFO',
         # "LOG_FILE": "Chihiro.txt"
     }
+
+    def __init__(self):
+        host = '10.10.202.13'
+        user = 'bigdata_user'
+        password = 'ulyhx3rxqhtw'
+
+        # host = '10.55.5.7'
+        # user = 'tw_user'
+        # password = '123456'
+
+        database = 'TWSpider'
+        self.scaned_url_list = []
+        self.engine_third_house = create_engine(
+            'mssql+pymssql://{}:{}@{}/{}'.format(user, password, host, database))
+        self.sql_select = pd.read_sql(
+            "select HouseUrl,HouseStatus from ThirdHouseResource where Resource='%s' and RentalStatus = %s" % (
+                self.Resource, self.RentalStatus),
+            self.engine_third_house)
+        self.url_list = self.sql_select["HouseUrl"].tolist()
 
     def parse(self, response):
         region_xpath_list = response.xpath(
@@ -175,9 +200,36 @@ class Chihiro(scrapy.Spider):
             item["PropertyAddress"] = address
             item["TotalPrice"] = info_red
             item["PriceUnit"] = info_grey.replace("单价", "")
+            if self.is_finished():
+                pipeline = self.crawler.spider.pipeline
+                scaned_url_list = pipeline.scaned_url_list
+                url_list = pipeline.url_list
+                housing_trade_list = [x for x in url_list if x not in scaned_url_list]
+                logging.info(housing_trade_list)
+                for housing_url in housing_trade_list:
+                    yield scrapy.Request(url=housing_url, callback=self.house_status_handle)
+
             yield item
         next_page_handle = response.xpath("//a[@class='cPage'][1]/@href").extract_first()
         if next_page_handle:
             next_page = self.base_url + next_page_handle
             yield scrapy.Request(url=next_page, callback=self.house_handle,
                                  meta={"region": region, "plate": plate})
+
+    def is_finished(self):
+        flag_queue = len(self.crawler.engine.slot.scheduler)
+        if flag_queue:
+            return False
+        return True
+
+    def house_status_handle(self, response):
+        # 验证码
+        url = response.url
+        item = {}
+        flag = response.xpath("//h1[@class='house-tit']/text()").extract_first()
+        if flag:
+            pass
+        else:
+            item["flag_remaining"] = True
+            item["HouseUrl"] = url
+            yield item

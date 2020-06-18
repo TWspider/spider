@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 import scrapy
 import re
+import pandas as pd
+from sqlalchemy import create_engine
+import datetime
+import logging
 import json
 from copy import deepcopy
+
 from scrapy.loader import ItemLoader
 from ..items import ChihiroItem
 import random
@@ -32,12 +37,12 @@ class Chihiro(scrapy.Spider):
             'accept-language': 'gzip',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
         },
-        # "DOWNLOAD_DELAY": 0.3,
-        # "CONCURRENT_REQUESTS": 1,
+        "DOWNLOAD_DELAY": 0.3,
+        "CONCURRENT_REQUESTS": 5,
         "RETRY_HTTP_CODES": [302, 403, 502],
         "RETRY_TIMES": 3,
         "DOWNLOADER_MIDDLEWARES": {
-            # 'Chihiro.middleware_request.ChihiroDownloaderMiddleware': 543,
+            'Chihiro.middleware_request.IpAgent_Middleware': 543,
         },
         # 清洗参数
         "SPIDER_MIDDLEWARES": {
@@ -66,6 +71,12 @@ class Chihiro(scrapy.Spider):
             'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727)',
             'Lynx/2.8.5rel.1 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/1.2.9',
         ]
+
+    def is_finished(self):
+        flag_queue = len(self.crawler.engine.slot.scheduler)
+        if flag_queue:
+            return False
+        return True
 
     def get_headers(self):
         settings = get_project_settings()
@@ -236,4 +247,26 @@ class Chihiro(scrapy.Spider):
             item1.fields[trade_key_info] = Field()
             item1[trade_key_info] = trade_value_info
         item1.update(item)
+        if self.is_finished():
+            # crawler
+            pipeline = self.crawler.spider.pipeline
+            scaned_url_list = pipeline.scaned_url_list
+            url_list = pipeline.url_list
+            housing_trade_list = [x for x in url_list if x not in scaned_url_list]
+            logging.info(housing_trade_list)
+            for housing_url in housing_trade_list:
+                yield scrapy.Request(url=housing_url, callback=self.house_status_handle, headers=self.get_headers())
         yield item1
+
+    def house_status_handle(self, response):
+        # 验证码
+        url = response.url
+        item = {}
+        flag = response.xpath("//div[@class='title']/h1[@class='main']/text()").extract_first()
+        flag_shelves = response.xpath("//div[@class='title']/h1[@class='main']/span/text()").extract_first()
+        if flag and flag_shelves == None:
+            pass
+        else:
+            item["flag_remaining"] = True
+            item["HouseUrl"] = url
+            yield item
